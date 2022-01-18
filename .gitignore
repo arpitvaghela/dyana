@@ -11,6 +11,8 @@ lightning_logs
 # C extensions
 *.so
 
+sweep*
+grok_log
 # Distribution / packaging
 .Python
 build/

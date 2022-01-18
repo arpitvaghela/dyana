@@ -20,7 +20,7 @@ def knowledge_transfer(net2: th.nn.Module, old_state_path: str):
         elif "self_attn_norm" in k.split(".") or "ffn_norm" in k.split("."):
             continue
         elif "attn_heads" in k.split("."):
-            updated_state[k] = th.zeros_like(new_state[k])
+            updated_state[k] = th.randn_like(new_state[k]) * 0.001
             weight_name = k.split(".")
             layer_idx = int(weight_name[3])
             if layer_idx < n_layers_old:
@@ -61,7 +61,7 @@ def knowledge_transfer(net2: th.nn.Module, old_state_path: str):
                         dice = [slice(dim) for dim in final_old_w.shape]
                         updated_state[k][dice] = final_old_w
         else:
-            updated_state[k] = th.zeros_like(new_state[k])
+            updated_state[k] = th.randn_like(new_state[k]) * 0.001
             if k in old_state:
                 dice = [slice(dim) for dim in old_state[k].shape]
                 updated_state[k][dice] = old_state[k]
