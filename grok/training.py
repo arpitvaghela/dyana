@@ -717,20 +717,18 @@ def train(hparams: Namespace) -> None:
     )
     # logger = CSVLogger(hparams.logdir)
     logger = WandbLogger(project="grok_log", config=hparams.__dict__)
-    # checkpointer = ModelCheckpoint(
-    #     filepath=checkpoint_path,
-    #     monitor="save_ckpt",
-    #     mode="max",
-    #     save_top_k=len(hparams.ckpt_epochs),
-    #     verbose=False,
-    # )
+    checkpointer = ModelCheckpoint(
+        dirpath=checkpoint_path,
+        every_n_train_steps=100,
+        verbose=True,
+    )
     trainer_args = {
         "max_steps": hparams.max_steps,
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
         "val_check_interval": 1,
         "profiler": False,
-        # "checkpoint_callback": checkpointer,
+        "callbacks": [checkpointer],
         # "logger": logger,
         "log_every_n_steps": 1,
         "flush_logs_every_n_steps": 1000,
