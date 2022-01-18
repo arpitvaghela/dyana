@@ -8,6 +8,8 @@ setup(
         "pytorch_lightning",
         "blobfile",
         "numpy",
+        "sympy",
+        "wandb",
         "torch",
         "tqdm",
         "scipy",

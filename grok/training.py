@@ -866,7 +866,7 @@ def add_args(parser=None) -> Namespace:
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--max_epochs", type=int, default=None)
     parser.add_argument("--max_steps", type=int, default=100000)
-    parser.add_argument("--log", type=bool, default=True)
+    parser.add_argument("--log", type=bool, default=False)
     parser.add_argument("--load_path", type=str, default=None)
     parser.add_argument("--resume_id", type=str, default="")
     # parser.add_argument("--checkpoint_period", type=int, default=1)
