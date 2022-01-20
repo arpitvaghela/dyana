@@ -8,6 +8,7 @@ import logging
 import math
 import os
 import pickle
+from runpy import run_path
 import sys
 import time
 from argparse import ArgumentParser, Namespace
@@ -35,6 +36,7 @@ from grok.data import (
 )
 from grok.measure import get_sharpness
 from grok.transformer import Transformer
+import wandb
 
 DEFAULT_LOG_DIR = "logs"
 
@@ -50,9 +52,11 @@ class TrainableTransformer(LightningModule):
                         self.add_model_specific_args().
         """
         super().__init__()
+        if type(hparams) == type({"a": 1}):
+            hparams = Namespace(**hparams)
+
         self.save_hyperparameters(hparams)
         self.prepare_data()
-
         self.transformer = Transformer(
             hparams.n_layers,
             hparams.n_heads,
@@ -676,6 +680,15 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
+    logger = WandbLogger(project="grok_log", config=hparams.__dict__)
+    if hparams.resume:
+        r_path = hparams.run_path
+        id = r_path.split("/")[-1]
+        print(id)
+        logger = WandbLogger(
+            project="grok_log", config=hparams.__dict__, resume=True, id=id
+        )
+
     # Process the args
     if hparams.logdir is None:
         hparams.logdir = os.environ.get("LOGDIR", ".")
@@ -703,8 +716,15 @@ def train(hparams: Namespace) -> None:
 
     # Create the model
     model = TrainableTransformer(hparams).float()
-    if hparams.load_path:
+
+    if hparams.resume and hparams.load_path and hparams.run_path:
+        record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
+        model = TrainableTransformer.load_from_checkpoint(record.name)
+        model = model.float()
+
+    if hparams.load_path and not hparams.resume:
         knowledge_transfer(model, hparams.load_path)
+
     print(model.state_dict())
     path = os.path.join(
         checkpoint_path,
@@ -716,10 +736,9 @@ def train(hparams: Namespace) -> None:
         path,
     )
     # logger = CSVLogger(hparams.logdir)
-    logger = WandbLogger(project="grok_log", config=hparams.__dict__)
     checkpointer = ModelCheckpoint(
         dirpath=checkpoint_path,
-        every_n_train_steps=100,
+        every_n_train_steps=1000,
         verbose=True,
     )
     trainer_args = {
@@ -730,8 +749,7 @@ def train(hparams: Namespace) -> None:
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
-        "log_every_n_steps": 1,
-        "flush_logs_every_n_steps": 1000,
+        "log_every_n_steps": 10,
     }
     # add expand_callback if expand size > 0
     if hparams.log:
@@ -744,6 +762,20 @@ def train(hparams: Namespace) -> None:
     trainer = Trainer(**trainer_args)
 
     trainer.fit(model=model)  # type: ignore
+
+    trainer.save_checkpoint(
+        os.path.join(
+            checkpoint_path,
+            f"{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
+        )
+    )
+    wandb.save(
+        os.path.join(
+            checkpoint_path,
+            f"{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
+        )
+    )
+
     torch.save(
         model,
         os.path.join(
@@ -866,7 +898,8 @@ def add_args(parser=None) -> Namespace:
     parser.add_argument("--max_steps", type=int, default=100000)
     parser.add_argument("--log", type=bool, default=False)
     parser.add_argument("--load_path", type=str, default=None)
-    parser.add_argument("--resume_id", type=str, default="")
+    parser.add_argument("--resume", type=bool, default=False)
+    parser.add_argument("--run_path", type=str, default=None)
     # parser.add_argument("--checkpoint_period", type=int, default=1)
     parser = TrainableTransformer.add_model_specific_args(parser)
     return parser
