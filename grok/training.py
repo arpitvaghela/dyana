@@ -24,6 +24,7 @@ from pytorch_lightning.loggers import CSVLogger, WandbLogger
 from torch import Tensor
 from torch.optim.lr_scheduler import LambdaLR
 from grok.knowledge_transfer import knowledge_transfer
+from datetime import datetime
 
 import grok.metrics as metrics
 from grok import transformer
@@ -692,7 +693,13 @@ def train(hparams: Namespace) -> None:
     # Process the args
     if hparams.logdir is None:
         hparams.logdir = os.environ.get("LOGDIR", ".")
-    hparams.logdir = os.path.abspath(hparams.logdir)
+
+    # hparams.logdir = os.path.abspath(hparams.logdir)
+    # now = datetime.now()
+    # dt_string = now.strftime("%Y-%m-%d_%H:%M:%S")
+    # hparams.logdir = hparams.logdir + f"/{dt_string}"
+
+    os.makedirs(hparams.logdir, exist_ok=True)
 
     # Make sure d_model, heads, and d_key are compatible
     assert (
@@ -718,8 +725,8 @@ def train(hparams: Namespace) -> None:
     model = TrainableTransformer(hparams).float()
 
     if hparams.resume and hparams.load_path and hparams.run_path:
-        record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
-        model = TrainableTransformer.load_from_checkpoint(record.name)
+        # record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
+        model = TrainableTransformer.load_from_checkpoint(hparams.load_path)
         model = model.float()
 
     if hparams.load_path and not hparams.resume:
@@ -738,7 +745,7 @@ def train(hparams: Namespace) -> None:
     # logger = CSVLogger(hparams.logdir)
     checkpointer = ModelCheckpoint(
         dirpath=checkpoint_path,
-        every_n_train_steps=1000,
+        every_n_train_steps=10000,
         verbose=True,
     )
     trainer_args = {
@@ -749,7 +756,7 @@ def train(hparams: Namespace) -> None:
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
-        "log_every_n_steps": 10,
+        "log_every_n_steps": 20,
     }
     # add expand_callback if expand size > 0
     if hparams.log:
@@ -895,7 +902,7 @@ def add_args(parser=None) -> Namespace:
     parser.add_argument("--random_seed", type=int, default=-1)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--max_epochs", type=int, default=None)
-    parser.add_argument("--max_steps", type=int, default=100000)
+    parser.add_argument("--max_steps", type=int, default=1000000)
     parser.add_argument("--log", type=bool, default=False)
     parser.add_argument("--load_path", type=str, default=None)
     parser.add_argument("--resume", type=bool, default=False)
