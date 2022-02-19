@@ -13,6 +13,7 @@ import sys
 import time
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List, Optional, Tuple, Union
+from gevent import reinit
 
 import numpy as np
 import pytorch_lightning
@@ -681,14 +682,12 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    logger = WandbLogger(project="grok_log", config=hparams.__dict__)
+    logger = WandbLogger(config=hparams.__dict__)
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
-        logger = WandbLogger(
-            project="grok_log", config=hparams.__dict__, resume=True, id=id
-        )
+        logger = WandbLogger(config=hparams.__dict__, resume=True, id=id)
 
     # Process the args
     if hparams.logdir is None:
@@ -700,6 +699,7 @@ def train(hparams: Namespace) -> None:
     # hparams.logdir = hparams.logdir + f"/{dt_string}"
 
     os.makedirs(hparams.logdir, exist_ok=True)
+    wandb.log(hparams.__dict__)
 
     # Make sure d_model, heads, and d_key are compatible
     assert (
@@ -724,15 +724,16 @@ def train(hparams: Namespace) -> None:
     # Create the model
     model = TrainableTransformer(hparams).float()
 
-    if hparams.resume and hparams.load_path and hparams.run_path:
-        # record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
-        model = TrainableTransformer.load_from_checkpoint(hparams.load_path)
-        model = model.float()
+    # # Continue training a single model
+    # if hparams.resume and hparams.load_path and hparams.run_path:
+    #     # record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
+    #     model = TrainableTransformer.load_from_checkpoint(hparams.load_path)
+    #     model = model.float()
 
-    if hparams.load_path and not hparams.resume:
+    if hparams.load_path:
         knowledge_transfer(model, hparams.load_path)
 
-    print(model.state_dict())
+    # print(model.state_dict())
     path = os.path.join(
         checkpoint_path,
         f"init_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
