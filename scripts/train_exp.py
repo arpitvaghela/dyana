@@ -52,14 +52,14 @@ class Step:
         return cmd
 
 
-# 100000
 datapct_range = [20, 25, 30, 35, 40, 45, 50, 60, 80]
+
 for datapct in datapct_range:
     steps = [
         Step(1, 2, 8, datapct, 5_000, math_operator="s5"),
         Step(1, 4, 16, datapct, 10_000, math_operator="s5", load_path="final_8_2_1.pt"),
         Step(
-            2, 4, 32, datapct, 20_000, math_operator="s5", load_path="final_16_4_1.pt"
+            2, 4, 32, datapct, 15_000, math_operator="s5", load_path="final_16_4_1.pt"
         ),
         Step(
             2, 4, 64, datapct, 20_000, math_operator="s5", load_path="final_32_4_2.pt"

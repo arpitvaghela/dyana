@@ -226,15 +226,16 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
-        optimizer = CustomAdamW(
-            self.parameters(),
-            betas=(0.9, 0.98),
-            eps=1e-8,
-            lr=1,
-            weight_decay=self.hparams.weight_decay,
-            noise_factor=self.hparams.noise_factor,
-            weight_decay_form=self.hparams.weight_decay_kind,
-        )
+        # optimizer = CustomAdamW(
+        #     self.parameters(),
+        #     betas=(0.9, 0.98),
+        #     eps=1e-8,
+        #     lr=1,
+        #     weight_decay=self.hparams.weight_decay,
+        #     noise_factor=self.hparams.noise_factor,
+        #     weight_decay_form=self.hparams.weight_decay_kind,
+        # )
+        optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
         # optimizer = SAM(
         #     self.parameters(),
         #     base_optimizer=CustomAdamW,
