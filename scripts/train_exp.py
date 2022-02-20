@@ -29,7 +29,7 @@ class Step:
     def get_command_str(self, run_path: str):
         cmd = f"python scripts/train.py "
         id = run_path.split("/")[-1]
-        cmd += f"--logdir ./logs/{id} --batch_size 0"
+        cmd += f"--logdir ./logs/{id} --batchsize 0 "
         if self.n_layers:
             cmd += f"--n_layers {self.n_layers} "
         if self.n_heads:
@@ -52,7 +52,8 @@ class Step:
         return cmd
 
 
-datapct_range = [20, 25, 30, 35, 40, 45, 50, 60, 80]
+# datapct_range = [20, 25, 30, 35, 40]
+datapct_range = [45, 50, 55, 60, 65, 70, 80]
 
 for datapct in datapct_range:
     steps = [

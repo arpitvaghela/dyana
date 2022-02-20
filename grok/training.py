@@ -683,12 +683,14 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    logger = WandbLogger(config=hparams.__dict__)
+    logger = WandbLogger(project="dyana", config=hparams.__dict__)
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
-        logger = WandbLogger(config=hparams.__dict__, resume=True, id=id)
+        logger = WandbLogger(
+            project="dyana", config=hparams.__dict__, resume=True, id=id
+        )
 
     # Process the args
     if hparams.logdir is None:
@@ -700,7 +702,6 @@ def train(hparams: Namespace) -> None:
     # hparams.logdir = hparams.logdir + f"/{dt_string}"
 
     os.makedirs(hparams.logdir, exist_ok=True)
-    wandb.log(hparams.__dict__)
 
     # Make sure d_model, heads, and d_key are compatible
     assert (
