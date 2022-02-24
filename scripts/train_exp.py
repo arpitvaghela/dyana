@@ -45,8 +45,8 @@ class Step:
             cmd += f"--math_operator {self.math_operator} "
         if self.load_path:
             cmd += f"--load_path ./logs/{id}/checkpoints/{self.load_path}"
-        if run:
-            return cmd + f" --resume 1 --run_path {run_path} "
+        if run_path:
+            return cmd + f" --resume 1 --run_path {run_path}"
 
         return cmd
 
@@ -55,7 +55,30 @@ class Step:
 datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
 
 for datapct in datapct_range:
-    steps = [
+    steps1_5 = [
+        Step(1, 2, 8, datapct, 2_500, math_operator="s5"),
+        Step(1, 3, 12, datapct, 2_500, math_operator="s5"),
+        Step(1, 4, 16, datapct, 5_000, math_operator="s5", load_path="final_8_2_1.pt"),
+        Step(1, 4, 24, datapct, 5_000, math_operator="s5", load_path="final_8_2_1.pt"),
+        Step(2, 4, 32, datapct, 7_500, math_operator="s5", load_path="final_16_4_1.pt"),
+        Step(2, 4, 48, datapct, 7_500, math_operator="s5", load_path="final_16_4_1.pt"),
+        Step(
+            2, 4, 64, datapct, 10_000, math_operator="s5", load_path="final_32_4_2.pt"
+        ),
+        Step(
+            2, 4, 96, datapct, 10_000, math_operator="s5", load_path="final_32_4_2.pt"
+        ),
+        Step(
+            2,
+            4,
+            128,
+            datapct,
+            50_000,
+            math_operator="s5",
+            load_path="final_64_4_2.pt",
+        ),
+    ]
+    steps2 = [
         Step(1, 2, 8, datapct, 5_000, math_operator="s5"),
         Step(1, 4, 16, datapct, 10_000, math_operator="s5", load_path="final_8_2_1.pt"),
         Step(
@@ -77,8 +100,7 @@ for datapct in datapct_range:
     run = wandb.init(project="dyana")
     wandb.finish()
 
-    for i, c in enumerate(steps):
+    for i, c in enumerate(steps1_5):
         print(run.id)
         cmd = c.get_command_str(run.path)
         os.system(cmd)
-
