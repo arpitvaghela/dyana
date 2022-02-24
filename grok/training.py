@@ -235,7 +235,10 @@ class TrainableTransformer(LightningModule):
         #     noise_factor=self.hparams.noise_factor,
         #     weight_decay_form=self.hparams.weight_decay_kind,
         # )
+
         optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
+        print(optimizer)
+
         # optimizer = SAM(
         #     self.parameters(),
         #     base_optimizer=CustomAdamW,
@@ -756,6 +759,7 @@ def train(hparams: Namespace) -> None:
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
         "val_check_interval": 1,
+        "check_val_every_n_epoch": 10,
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
