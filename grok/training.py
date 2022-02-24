@@ -13,7 +13,6 @@ import sys
 import time
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List, Optional, Tuple, Union
-from gevent import reinit
 
 import numpy as np
 import pytorch_lightning
@@ -226,16 +225,17 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
-        # optimizer = CustomAdamW(
-        #     self.parameters(),
-        #     betas=(0.9, 0.98),
-        #     eps=1e-8,
-        #     lr=1,
-        #     weight_decay=self.hparams.weight_decay,
-        #     noise_factor=self.hparams.noise_factor,
-        #     weight_decay_form=self.hparams.weight_decay_kind,
-        # )
-        optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
+        optimizer = CustomAdamW(
+            self.parameters(),
+            betas=(0.9, 0.98),
+            eps=1e-8,
+            lr=1,
+            weight_decay=self.hparams.weight_decay,
+            noise_factor=self.hparams.noise_factor,
+            weight_decay_form=self.hparams.weight_decay_kind,
+        )
+        print(optimizer)
+        # optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
         # optimizer = SAM(
         #     self.parameters(),
         #     base_optimizer=CustomAdamW,
@@ -471,7 +471,8 @@ class TrainableTransformer(LightningModule):
         }
         if self.current_epoch == 0:
             output["x_lhs"] = x_lhs
-
+        self.log("temp",1)
+        
         return output
 
     def training_epoch_end(self, outputs):
@@ -522,8 +523,9 @@ class TrainableTransformer(LightningModule):
                 "time_per_epoch": time.time() - self.training_epoch_start_time,
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
-            for k, v in logs.items():
-                self.log(k, v)
+
+            # for k, v in logs.items():
+            wandb.log(logs)
 
     def validation_step(self, batch, batch_idx):
         """
@@ -605,8 +607,9 @@ class TrainableTransformer(LightningModule):
                 logs["full_train_loss"] = tr_loss
                 logs["full_train_acc"] = tr_acc
 
-            for k, v in logs.items():
-                self.log(k, v)
+            #for k, v in logs.items():
+            wandb.log(logs)
+
         # save a checkpoint if the epoch is a power of 2
         if (
             self.current_epoch > 0
@@ -756,10 +759,11 @@ def train(hparams: Namespace) -> None:
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
         "val_check_interval": 1,
+        "check_val_every_n_epoch":1,
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
-        "log_every_n_steps": 20,
+        "log_every_n_steps": 1,
     }
     # add expand_callback if expand size > 0
     if hparams.log:
@@ -785,14 +789,13 @@ def train(hparams: Namespace) -> None:
             f"{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
         )
     )
-
-    torch.save(
-        model,
-        os.path.join(
+    print(type(model))
+    path =  os.path.join(
             checkpoint_path,
             f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
-        ),
-    )
+        )
+
+    torch.save({"model":model.state_dict(), "hparams":hparams},path)
 
     """
     margin = np.percentile(model.margin.detach().cpu().numpy(), 5)

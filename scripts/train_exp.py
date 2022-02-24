@@ -2,7 +2,6 @@ from typing import Optional
 import os
 import wandb
 
-
 class Step:
     def __init__(
         self,
@@ -29,7 +28,7 @@ class Step:
     def get_command_str(self, run_path: str):
         cmd = f"python scripts/train.py "
         id = run_path.split("/")[-1]
-        cmd += f"--logdir ./logs/{id} --batchsize 0 "
+        cmd += f"--logdir ./logs/{id} --batchsize 0 --weight_decay 1 --weight_decay_kind to_init "
         if self.n_layers:
             cmd += f"--n_layers {self.n_layers} "
         if self.n_heads:
@@ -47,13 +46,13 @@ class Step:
         if self.load_path:
             cmd += f"--load_path ./logs/{id}/checkpoints/{self.load_path}"
         if run:
-            return cmd + f" --resume 1 --run_path {run_path}"
+            return cmd + f" --resume 1 --run_path {run_path} "
 
         return cmd
 
 
 # datapct_range = [20, 25, 30, 35, 40]
-datapct_range = [45, 50, 55, 60, 65, 70, 80]
+datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
 
 for datapct in datapct_range:
     steps = [
@@ -76,10 +75,10 @@ for datapct in datapct_range:
         ),
     ]
     run = wandb.init(project="dyana")
+    wandb.finish()
+
     for i, c in enumerate(steps):
         print(run.id)
-        wandb.log({"size_step": i})
         cmd = c.get_command_str(run.path)
         os.system(cmd)
 
-    wandb.finish()

@@ -1,11 +1,12 @@
 import torch as th
 from copy import deepcopy
 
-
 def knowledge_transfer(net2: th.nn.Module, old_state_path: str):
     print(f"Copied weights from {old_state_path}")
-    net1 = th.load(old_state_path)
-    old_state = net1.state_dict()
+    d = th.load(old_state_path)
+    old_state = d["model"]
+    hparams = d["hparams"]
+    net1 = type(net2)(hparams=hparams).float()
     n_layers_old = net1.transformer.n_layers
     n_head_old = net1.transformer.n_heads
 
