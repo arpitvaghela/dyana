@@ -236,7 +236,12 @@ class TrainableTransformer(LightningModule):
         #     weight_decay_form=self.hparams.weight_decay_kind,
         # )
 
-        optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
+        optimizer = torch.optim.Adam(
+            self.parameters(),
+            betas=(0.9, 0.98),
+            lr=1,
+            weight_decay=self.hparams.weight_decay,
+        )
         print(optimizer)
 
         # optimizer = SAM(
@@ -475,6 +480,7 @@ class TrainableTransformer(LightningModule):
         if self.current_epoch == 0:
             output["x_lhs"] = x_lhs
 
+        self.log("temp", 1)
         return output
 
     def training_epoch_end(self, outputs):
@@ -525,8 +531,8 @@ class TrainableTransformer(LightningModule):
                 "time_per_epoch": time.time() - self.training_epoch_start_time,
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
-            for k, v in logs.items():
-                self.log(k, v)
+            # for k, v in logs.items():
+            wandb.log(logs)
 
     def validation_step(self, batch, batch_idx):
         """
@@ -608,8 +614,10 @@ class TrainableTransformer(LightningModule):
                 logs["full_train_loss"] = tr_loss
                 logs["full_train_acc"] = tr_acc
 
-            for k, v in logs.items():
-                self.log(k, v)
+            # for k, v in logs.items():
+            # self.log(k, v)
+            wandb.log(logs)
+
         # save a checkpoint if the epoch is a power of 2
         if (
             self.current_epoch > 0

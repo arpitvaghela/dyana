@@ -13,6 +13,7 @@ class Step:
         max_steps,
         math_operator: Optional[int] = None,
         load_path: Optional[str] = None,
+        wd: Optional[float] = 1e-6,
     ) -> None:
         self.n_layers = n_layers
         self.n_heads = n_heads
@@ -22,6 +23,7 @@ class Step:
         self.max_steps = max_steps
         self.math_operator = math_operator
         self.load_path = load_path
+        self.wd = wd
 
     def get_previous_step(self):
         pass
@@ -29,7 +31,7 @@ class Step:
     def get_command_str(self, run_path: str):
         cmd = f"python scripts/train.py "
         id = run_path.split("/")[-1]
-        cmd += f"--logdir ./logs/{id} --batchsize 0 --weight_decay 0 "
+        cmd += f"--logdir ./logs/{id} --batchsize 0 --weight_decay {self.wd} "
         if self.n_layers:
             cmd += f"--n_layers {self.n_layers} "
         if self.n_heads:
@@ -52,41 +54,96 @@ class Step:
         return cmd
 
 
-datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
-
+# datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
+datapct_range = [40, 50, 60]
 
 for datapct in datapct_range:
     steps1_5 = [
         Step(1, 2, 8, datapct, 2_500, math_operator="s5"),
-        Step(1, 3, 12, datapct, 2_500, math_operator="s5"),
-        Step(1, 4, 16, datapct, 5_000, math_operator="s5", load_path="final_8_2_1.pt"),
-        Step(1, 4, 24, datapct, 5_000, math_operator="s5", load_path="final_8_2_1.pt"),
-        Step(2, 4, 32, datapct, 7_500, math_operator="s5", load_path="final_16_4_1.pt"),
-        Step(2, 4, 48, datapct, 7_500, math_operator="s5", load_path="final_16_4_1.pt"),
+        Step(2, 3, 8, datapct, 2_500, math_operator="s5", load_path="final_8_2_1.pt"),
+        Step(3, 4, 8, datapct, 5_000, math_operator="s5", load_path="final_8_3_2.pt"),
+        Step(3, 4, 12, datapct, 5_000, math_operator="s5", load_path="final_8_4_3.pt"),
+        Step(3, 4, 16, datapct, 5_000, math_operator="s5", load_path="final_12_4_3.pt"),
+        Step(3, 4, 24, datapct, 7_000, math_operator="s5", load_path="final_16_4_3.pt"),
+        Step(3, 4, 36, datapct, 8_000, math_operator="s5", load_path="final_24_4_3.pt"),
         Step(
-            2, 4, 64, datapct, 10_000, math_operator="s5", load_path="final_32_4_2.pt"
+            3,
+            4,
+            48,
+            datapct,
+            10_000,
+            math_operator="s5",
+            load_path="final_36_4_3.pt",
         ),
         Step(
-            2, 4, 96, datapct, 10_000, math_operator="s5", load_path="final_32_4_2.pt"
+            3,
+            4,
+            64,
+            datapct,
+            10_000,
+            math_operator="s5",
+            load_path="final_48_4_3.pt",
         ),
         Step(
-            2,
+            3,
+            4,
+            96,
+            datapct,
+            10_000,
+            math_operator="s5",
+            load_path="final_64_4_3.pt",
+        ),
+        Step(
+            3,
             4,
             128,
             datapct,
-            50_000,
+            30_000,
             math_operator="s5",
-            load_path="final_64_4_2.pt",
+            load_path="final_96_4_3.pt",
         ),
     ]
     steps2 = [
-        Step(1, 2, 8, datapct, 5_000, math_operator="s5"),
-        Step(1, 4, 16, datapct, 10_000, math_operator="s5", load_path="final_8_2_1.pt"),
+        Step(1, 2, 8, datapct, 5_000, wd=1e-2, math_operator="s5"),
         Step(
-            2, 4, 32, datapct, 15_000, math_operator="s5", load_path="final_16_4_1.pt"
+            1,
+            4,
+            16,
+            datapct,
+            10_000,
+            wd=1e-3,
+            math_operator="s5",
+            load_path="final_8_2_1.pt",
         ),
         Step(
-            2, 4, 64, datapct, 20_000, math_operator="s5", load_path="final_32_4_2.pt"
+            2,
+            4,
+            16,
+            datapct,
+            15_000,
+            wd=1e-4,
+            math_operator="s5",
+            load_path="final_16_4_1.pt",
+        ),
+        Step(
+            2,
+            4,
+            32,
+            datapct,
+            15_000,
+            wd=1e-5,
+            math_operator="s5",
+            load_path="final_16_4_2.pt",
+        ),
+        Step(
+            2,
+            4,
+            64,
+            datapct,
+            20_000,
+            wd=5e-5,
+            math_operator="s5",
+            load_path="final_32_4_2.pt",
         ),
         Step(
             2,
@@ -94,6 +151,7 @@ for datapct in datapct_range:
             128,
             datapct,
             50_000,
+            wd=1e-6,
             math_operator="s5",
             load_path="final_64_4_2.pt",
         ),
@@ -101,7 +159,7 @@ for datapct in datapct_range:
     run = wandb.init(project="dyana")
     wandb.finish()
 
-    for i, c in enumerate(steps1_5):
+    for i, c in enumerate(steps2):
         print(run.id)
         cmd = c.get_command_str(run.path)
         os.system(cmd)
