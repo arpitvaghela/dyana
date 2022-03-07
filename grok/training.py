@@ -13,7 +13,6 @@ import sys
 import time
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List, Optional, Tuple, Union
-from gevent import reinit
 
 import numpy as np
 import pytorch_lightning
@@ -483,8 +482,8 @@ class TrainableTransformer(LightningModule):
         }
         if self.current_epoch == 0:
             output["x_lhs"] = x_lhs
-
         self.log("temp", 1)
+
         return output
 
     def training_epoch_end(self, outputs):
@@ -775,7 +774,7 @@ def train(hparams: Namespace) -> None:
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
-        "log_every_n_steps": 20,
+        "log_every_n_steps": 1,
     }
     # add expand_callback if expand size > 0
     if hparams.log:
@@ -801,14 +800,13 @@ def train(hparams: Namespace) -> None:
             f"{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
         )
     )
-
-    torch.save(
-        model,
-        os.path.join(
-            checkpoint_path,
-            f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
-        ),
+    print(type(model))
+    path = os.path.join(
+        checkpoint_path,
+        f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
     )
+
+    torch.save({"model": model.state_dict(), "hparams": hparams}, path)
 
     """
     margin = np.percentile(model.margin.detach().cpu().numpy(), 5)

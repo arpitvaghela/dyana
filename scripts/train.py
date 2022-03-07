@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-
 import grok
 
 parser = grok.training.add_args()
