@@ -164,10 +164,19 @@ for datapct in datapct_range:
             load_path="final_64_4_2.pt",
         ),
     ]
+    final_steps = steps2
     run = wandb.init(project="dyana")
+    path = os.path.join("logs", f"{run.id}")
+    os.makedirs(path, exist_ok=True)
+    file_path = os.path.join(path, "steps.txt")
+    print("Steps logged to => ", file_path)
+    with open(file_path, "w") as fp:
+        for step in final_steps:
+            fp.write(str(step))
+    wandb.save(file_path)
     wandb.finish()
 
-    for i, c in enumerate(steps2):
+    for i, c in enumerate(final_steps):
         print(run.id)
         cmd = c.get_command_str(run.path)
         os.system(cmd)
