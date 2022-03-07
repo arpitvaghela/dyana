@@ -91,6 +91,9 @@ class TrainableTransformer(LightningModule):
             default=0,
             help="-1 -> entire dataset, 0 -> auto-calculate, 0<N<1 -> fraction of dataset, N>1 -> N",
         )
+        parser.add_argument(
+            "--optimizer", type=str, default="Adam", help="[Adam | AdamW ]"
+        )
         parser.add_argument("--n_layers", type=int, default=2)
         parser.add_argument("--n_heads", type=int, default=4)
         parser.add_argument("--d_model", type=int, default=128)
@@ -226,22 +229,23 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
-        # optimizer = CustomAdamW(
-        #     self.parameters(),
-        #     betas=(0.9, 0.98),
-        #     eps=1e-8,
-        #     lr=1,
-        #     weight_decay=self.hparams.weight_decay,
-        #     noise_factor=self.hparams.noise_factor,
-        #     weight_decay_form=self.hparams.weight_decay_kind,
-        # )
-
-        optimizer = torch.optim.Adam(
-            self.parameters(),
-            betas=(0.9, 0.98),
-            lr=1,
-            weight_decay=self.hparams.weight_decay,
-        )
+        if self.hparams.optimizer == "AdamW":
+            optimizer = CustomAdamW(
+                self.parameters(),
+                betas=(0.9, 0.98),
+                eps=1e-8,
+                lr=1,
+                weight_decay=self.hparams.weight_decay,
+                noise_factor=self.hparams.noise_factor,
+                weight_decay_form=self.hparams.weight_decay_kind,
+            )
+        if self.hparams.optimizer == "Adam":
+            optimizer = torch.optim.Adam(
+                self.parameters(),
+                betas=(0.9, 0.98),
+                lr=1,
+                weight_decay=self.hparams.weight_decay,
+            )
         print(optimizer)
 
         # optimizer = SAM(

@@ -14,6 +14,8 @@ class Step:
         math_operator: Optional[int] = None,
         load_path: Optional[str] = None,
         wd: Optional[float] = 1e-6,
+        max_lr: Optional[float] = 1e-3,
+        optim: Optional[str] = None,
     ) -> None:
         self.n_layers = n_layers
         self.n_heads = n_heads
@@ -24,6 +26,8 @@ class Step:
         self.math_operator = math_operator
         self.load_path = load_path
         self.wd = wd
+        self.optimizer = optim
+        self.max_lr = max_lr
 
     def get_previous_step(self):
         pass
@@ -34,6 +38,8 @@ class Step:
         cmd += f"--logdir ./logs/{id} --batchsize 0 --weight_decay {self.wd} "
         if self.n_layers:
             cmd += f"--n_layers {self.n_layers} "
+        if self.optimizer:
+            cmd += f"--optimizer {self.optimizer} "
         if self.n_heads:
             cmd += f"--n_heads {self.n_heads} "
         if self.d_model:
@@ -47,15 +53,17 @@ class Step:
         if self.math_operator:
             cmd += f"--math_operator {self.math_operator} "
         if self.load_path:
-            cmd += f"--load_path ./logs/{id}/checkpoints/{self.load_path}"
+            cmd += f"--load_path ./logs/{id}/checkpoints/{self.load_path} "
+        if self.max_lr:
+            cmd += f"--max_lr {self.max_lr} "
         if run_path:
-            return cmd + f" --resume 1 --run_path {run_path}"
+            return cmd + f" --resume 1 --run_path {run_path} "
 
         return cmd
 
 
 # datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
-datapct_range = [40, 50, 60]
+datapct_range = [50]
 
 for datapct in datapct_range:
     steps1_5 = [
@@ -104,13 +112,13 @@ for datapct in datapct_range:
         ),
     ]
     steps2 = [
-        Step(1, 2, 8, datapct, 5_000, wd=1e-2, math_operator="s5"),
+        Step(1, 2, 8, datapct, 5_000, wd=1e-3, math_operator="s5"),
         Step(
             1,
             4,
             16,
             datapct,
-            10_000,
+            5_000,
             wd=1e-3,
             math_operator="s5",
             load_path="final_8_2_1.pt",
@@ -120,8 +128,8 @@ for datapct in datapct_range:
             4,
             16,
             datapct,
-            15_000,
-            wd=1e-4,
+            5_000,
+            wd=1e-4,  # 1e-4
             math_operator="s5",
             load_path="final_16_4_1.pt",
         ),
@@ -131,7 +139,7 @@ for datapct in datapct_range:
             32,
             datapct,
             15_000,
-            wd=1e-5,
+            wd=1e-5,  # 1e-4
             math_operator="s5",
             load_path="final_16_4_2.pt",
         ),
@@ -141,7 +149,7 @@ for datapct in datapct_range:
             64,
             datapct,
             20_000,
-            wd=5e-5,
+            wd=1e-5,  # 1e-5
             math_operator="s5",
             load_path="final_32_4_2.pt",
         ),
