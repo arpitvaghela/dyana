@@ -90,6 +90,9 @@ class TrainableTransformer(LightningModule):
             default=0,
             help="-1 -> entire dataset, 0 -> auto-calculate, 0<N<1 -> fraction of dataset, N>1 -> N",
         )
+        parser.add_argument(
+            "--optimizer", type=str, default="Adam", help="[Adam | AdamW ]"
+        )
         parser.add_argument("--n_layers", type=int, default=2)
         parser.add_argument("--n_heads", type=int, default=4)
         parser.add_argument("--d_model", type=int, default=128)
@@ -225,17 +228,25 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
-        optimizer = CustomAdamW(
-            self.parameters(),
-            betas=(0.9, 0.98),
-            eps=1e-8,
-            lr=1,
-            weight_decay=self.hparams.weight_decay,
-            noise_factor=self.hparams.noise_factor,
-            weight_decay_form=self.hparams.weight_decay_kind,
-        )
+        if self.hparams.optimizer == "AdamW":
+            optimizer = CustomAdamW(
+                self.parameters(),
+                betas=(0.9, 0.98),
+                eps=1e-8,
+                lr=1,
+                weight_decay=self.hparams.weight_decay,
+                noise_factor=self.hparams.noise_factor,
+                weight_decay_form=self.hparams.weight_decay_kind,
+            )
+        if self.hparams.optimizer == "Adam":
+            optimizer = torch.optim.Adam(
+                self.parameters(),
+                betas=(0.9, 0.98),
+                lr=1,
+                weight_decay=self.hparams.weight_decay,
+            )
         print(optimizer)
-        # optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=1)
+
         # optimizer = SAM(
         #     self.parameters(),
         #     base_optimizer=CustomAdamW,
@@ -471,8 +482,8 @@ class TrainableTransformer(LightningModule):
         }
         if self.current_epoch == 0:
             output["x_lhs"] = x_lhs
-        self.log("temp",1)
-        
+        self.log("temp", 1)
+
         return output
 
     def training_epoch_end(self, outputs):
@@ -523,7 +534,6 @@ class TrainableTransformer(LightningModule):
                 "time_per_epoch": time.time() - self.training_epoch_start_time,
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
-
             # for k, v in logs.items():
             wandb.log(logs)
 
@@ -607,7 +617,8 @@ class TrainableTransformer(LightningModule):
                 logs["full_train_loss"] = tr_loss
                 logs["full_train_acc"] = tr_acc
 
-            #for k, v in logs.items():
+            # for k, v in logs.items():
+            # self.log(k, v)
             wandb.log(logs)
 
         # save a checkpoint if the epoch is a power of 2
@@ -759,7 +770,7 @@ def train(hparams: Namespace) -> None:
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
         "val_check_interval": 1,
-        "check_val_every_n_epoch":1,
+        "check_val_every_n_epoch": 10,
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
@@ -790,12 +801,12 @@ def train(hparams: Namespace) -> None:
         )
     )
     print(type(model))
-    path =  os.path.join(
-            checkpoint_path,
-            f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
-        )
+    path = os.path.join(
+        checkpoint_path,
+        f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
+    )
 
-    torch.save({"model":model.state_dict(), "hparams":hparams},path)
+    torch.save({"model": model.state_dict(), "hparams": hparams}, path)
 
     """
     margin = np.percentile(model.margin.detach().cpu().numpy(), 5)
