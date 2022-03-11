@@ -34,6 +34,7 @@ from grok.data import (
     VALID_OPERATORS,
     ArithmeticDataset,
     ArithmeticIterator,
+    PTBIterator,
 )
 from grok.measure import get_sharpness
 from grok.transformer import Transformer
@@ -100,6 +101,7 @@ class TrainableTransformer(LightningModule):
         parser.add_argument("--weight_noise", type=float, default=0.0)
         parser.add_argument("--non_linearity", type=str, default="relu")
         parser.add_argument("--max_context_len", type=int, default=50)
+        parser.add_argument("--dataset", type=str, default="bops")
         parser.add_argument("--math_operator", type=str, default="+")
         parser.add_argument(
             "--operand_length",
@@ -145,12 +147,13 @@ class TrainableTransformer(LightningModule):
         Loads training data to self.train_dataset
         Loads validation data to self.val_dataset
         """
-        (self.train_dataset, self.val_dataset,) = ArithmeticDataset.splits(
-            train_pct=self.hparams.train_data_pct,  # type: ignore
-            operator=self.hparams.math_operator,  # type: ignore
-            operand_length=self.hparams.operand_length,  # type: ignore
-            data_dir=self.hparams.datadir,  # type: ignore
-        )
+        if self.hparams.dataset == "bops":
+            (self.train_dataset, self.val_dataset,) = ArithmeticDataset.splits(
+                train_pct=self.hparams.train_data_pct,  # type: ignore
+                operator=self.hparams.math_operator,  # type: ignore
+                operand_length=self.hparams.operand_length,  # type: ignore
+                data_dir=self.hparams.datadir,  # type: ignore
+            )
 
     def train_dataloader(self) -> ArithmeticIterator:  # type: ignore
         """
@@ -159,13 +162,25 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        iterator = ArithmeticIterator(
+        if self.hparams.dataset == "ptb":
+            iterator = PTBIterator(
+                train_pct=self.hparams.train_data_pct,
+                batchsize_hint=self.hparams.batchsize,
+                device=device,
+                split="train",
+                data_dir="../data"
+            )
+
+        else:
+            iterator = ArithmeticIterator(
             self.train_dataset,
             device,
             batchsize_hint=self.hparams.batchsize,  # type: ignore
-        )
+            )
+        
         self.train_batchsize = iterator.batchsize
         self.batches_per_epoch = len(iterator)
+        
 
         return iterator
 
@@ -176,7 +191,17 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        iterator = ArithmeticIterator(
+        if self.hparams.dataset == "ptb":
+            iterator = PTBIterator(
+                train_pct=self.hparams.train_data_pct,
+                batchsize_hint=self.hparams.batchsize,
+                device=device,
+                split="valid",
+                data_dir="../data"
+            )
+
+        else:
+            iterator = ArithmeticIterator(
             self.val_dataset,
             device,
             batchsize_hint=-1,  # no need to batch validation data
@@ -190,7 +215,17 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        iterator = ArithmeticIterator(
+        if self.hparams.dataset == "ptb":
+            iterator = PTBIterator(
+                train_pct=self.hparams.train_data_pct,
+                batchsize_hint=self.hparams.batchsize,
+                device=device,
+                split="test",
+                data_dir="../data"
+            )
+
+        else:
+            iterator = ArithmeticIterator(
             self.val_dataset, device, batchsize_hint=-1  # type: ignore
         )
         return iterator

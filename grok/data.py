@@ -11,7 +11,12 @@ import torch
 from mod import Mod
 from sympy.combinatorics.permutations import Permutation
 from torch import LongTensor, Tensor
+from torch.utils.data import dataset
 from tqdm import tqdm
+
+from torchtext.datasets import PennTreebank
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
 
 VALID_OPERATORS = {
     "+": "addition",
@@ -479,3 +484,105 @@ class ArithmeticIterator(torch.utils.data.IterableDataset):
         :returns: the total number of batches
         """
         return math.ceil(len(self.dataset) / self.batchsize)
+
+
+class PTBIterator:
+    def __init__(self,train_pct, batchsize_hint, device,split="train", data_dir="../data",shuffle:bool = True) -> None:
+        self.device = device
+        # build vocab and tokenizer
+        train_iter = PennTreebank(root=data_dir, split=("train"))
+        self.tokenizer = get_tokenizer("basic_english")
+        self.vocab = build_vocab_from_iterator(map(self.tokenizer, train_iter), specials=["<unk>"])
+        self.vocab.set_default_index(self.vocab["<unk>"])
+        
+        self.make_dataset(train_pct,batchsize_hint,data_dir, split)
+        self.reset_iteration(shuffle=shuffle)
+
+    def make_dataset(self,train_pct:float, batchsize, data_dir, split):
+
+        iter = PennTreebank(root=data_dir, split=(split))
+        dataset = self.batchify(self.data_process(iter), batchsize)
+        self.batchsize = batchsize
+        rows, _ = self.calc_split_len(train_pct, dataset.shape[0])
+        self.dataset = dataset[:rows]
+
+    
+    @staticmethod
+    def calculate_batchsize(ds_size: int, batchsize_hint: int = 0) -> int:
+        """
+        Calculates which batch size to use
+
+        :param ds_size: the number of equations in the dataset
+        :param batchsize_hint: * 0 means we use a default batchsize
+                               * -1 means the entire dataset
+                               * float between 0 and 1 means each batch is
+                                 that fraction of the DS
+                               * int > 1 means that specific batch size
+        :returns: the actual batchsize to use
+        """
+
+        if batchsize_hint == -1:
+            return ds_size
+        elif batchsize_hint == 0:
+            return min(512, math.ceil(ds_size / 2.0))
+        elif (batchsize_hint > 0) and (batchsize_hint < 1):
+            return math.ceil(ds_size * batchsize_hint)
+        elif batchsize_hint > 1:
+            return min(batchsize_hint, ds_size)
+        else:
+            raise ValueError("batchsize_hint must be >= -1")
+
+    def reset_iteration(self, shuffle=True):
+        self.index = 0
+        if shuffle:
+            self.permutation = torch.randperm(self.dataset.shape[0])
+        else:
+            self.permutation = torch.arange(self.dataset.shape[0])
+
+    def __iter__(self):
+        """
+        :returns: this iterator
+        """
+        return self
+
+    def __next__(self) -> Dict[str, Tensor]:
+        """
+        Returns one batch of data.
+
+        :raises: StopIteration when we're out of data
+        :returns: batch tensor of shape (self.batchsize, tokens_per_eq)
+        """
+
+        batch_begin = self.index * self.batchsize
+        if batch_begin > len(self.dataset) - 1:
+            self.reset_iteration()
+            raise StopIteration
+        indices = self.permutation[batch_begin : batch_begin + self.batchsize]
+        text = self.dataset[indices, :-1]
+        target = self.dataset[indices, 1:]
+        batch = {"text": text.to(self.device), "target": target.to(self.device)}
+        self.index += 1
+        return batch
+
+    def __len__(self) -> int:
+        """
+        :returns: the total number of batches
+        """
+        return self.dataset.shape[0]
+
+    def calc_split_len(self, train_pct, ds_len):
+        train_rows = round(ds_len * (train_pct / 100.0))
+        val_rows = ds_len - train_rows
+        return train_rows, val_rows
+
+    def data_process(self, raw_text_iter: dataset.IterableDataset) -> Tensor:
+        """Convert raw text to flat tensor"""
+        data = [torch.tensor(self.vocab(self.tokenizer(item))) for item in raw_text_iter]
+        return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+
+    def batchify(self, data, bsz):
+        print(data.shape[0])
+        seq_len = data.shape[0] // bsz
+        data = data[:seq_len * bsz]
+        return data.view(bsz, seq_len).contiguous()
+        

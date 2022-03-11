@@ -63,7 +63,7 @@ class Step:
 
 
 # datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
-datapct_range = [50]
+datapct_range = [35]
 
 for datapct in datapct_range:
     steps1_5 = [
@@ -112,26 +112,28 @@ for datapct in datapct_range:
         ),
     ]
     steps2 = [
-        Step(1, 2, 8, datapct, 5_000, wd=1e-3, math_operator="s5"),
+        Step(1, 4, 8, datapct, 5_000, wd=1, math_operator="s5", optim="AdamW"),
         Step(
-            1,
+            2,
             4,
-            16,
+            8,
             datapct,
             5_000,
-            wd=1e-3,
+            wd=1,
             math_operator="s5",
-            load_path="final_8_2_1.pt",
-        ),
+            load_path="final_8_4_1.pt",
+            optim="AdamW"
+        ), 
         Step(
             2,
             4,
             16,
             datapct,
             5_000,
-            wd=1e-4,  # 1e-4
+            wd=1,  # 1e-4
             math_operator="s5",
-            load_path="final_16_4_1.pt",
+            load_path="final_8_4_2.pt",
+            optim="AdamW"
         ),
         Step(
             2,
@@ -139,9 +141,10 @@ for datapct in datapct_range:
             32,
             datapct,
             15_000,
-            wd=1e-5,  # 1e-4
+            wd=1,  # 1e-4
             math_operator="s5",
             load_path="final_16_4_2.pt",
+            optim="AdamW"
         ),
         Step(
             2,
@@ -149,9 +152,10 @@ for datapct in datapct_range:
             64,
             datapct,
             20_000,
-            wd=1e-5,  # 1e-5
+            wd=1,  # 1e-5
             math_operator="s5",
             load_path="final_32_4_2.pt",
+            optim="AdamW"
         ),
         Step(
             2,
@@ -159,9 +163,10 @@ for datapct in datapct_range:
             128,
             datapct,
             50_000,
-            wd=1e-6,
+            wd=1,
             math_operator="s5",
             load_path="final_64_4_2.pt",
+            optim="AdamW"
         ),
     ]
     final_steps = steps2
