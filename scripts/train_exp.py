@@ -80,18 +80,74 @@ datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
 # "s5conj": "s5conj",
 # "s5aba": "s5aba",
 # operations = ["+", "-", "/", "x**2+y**2_mod_97"]
-operations = ["(x._value//y)if(y._value%2==1)else(x-y)_mod_97", "x**2+y**2+x*y_mod_97", "x**2+y**2+x*y+x_mod_97", "x**3+x*y_mod_97", "x**3+x*y**2+y_mod_97", "s5conj", "s5aba"]
+operations = [
+    # "(x._value//y)if(y._value%2==1)else(x-y)_mod_97",
+    "x**2+y**2+x*y_mod_97",
+    "x**2+y**2+x*y+x_mod_97",
+    "x**3+x*y_mod_97",
+    "x**3+x*y**2+y_mod_97",
+    "s5conj",
+    "s5aba",
+]
 optim = "AdamW"
 for operation in operations:
     for datapct in datapct_range:
         steps1_5 = [
             Step(1, 2, 8, datapct, 2_500, math_operator=operation),
-            Step(2, 3, 8, datapct, 2_500, math_operator=operation, load_path="final_8_2_1.pt"),
-            Step(3, 4, 8, datapct, 5_000, math_operator=operation, load_path="final_8_3_2.pt"),
-            Step(3, 4, 12, datapct, 5_000, math_operator=operation, load_path="final_8_4_3.pt"),
-            Step(3, 4, 16, datapct, 5_000, math_operator=operation, load_path="final_12_4_3.pt"),
-            Step(3, 4, 24, datapct, 7_000, math_operator=operation, load_path="final_16_4_3.pt"),
-            Step(3, 4, 36, datapct, 8_000, math_operator=operation, load_path="final_24_4_3.pt"),
+            Step(
+                2,
+                3,
+                8,
+                datapct,
+                2_500,
+                math_operator=operation,
+                load_path="final_8_2_1.pt",
+            ),
+            Step(
+                3,
+                4,
+                8,
+                datapct,
+                5_000,
+                math_operator=operation,
+                load_path="final_8_3_2.pt",
+            ),
+            Step(
+                3,
+                4,
+                12,
+                datapct,
+                5_000,
+                math_operator=operation,
+                load_path="final_8_4_3.pt",
+            ),
+            Step(
+                3,
+                4,
+                16,
+                datapct,
+                5_000,
+                math_operator=operation,
+                load_path="final_12_4_3.pt",
+            ),
+            Step(
+                3,
+                4,
+                24,
+                datapct,
+                7_000,
+                math_operator=operation,
+                load_path="final_16_4_3.pt",
+            ),
+            Step(
+                3,
+                4,
+                36,
+                datapct,
+                8_000,
+                math_operator=operation,
+                load_path="final_24_4_3.pt",
+            ),
             Step(
                 3,
                 4,
@@ -193,7 +249,7 @@ for operation in operations:
                 wd=1,  # 1e-4
                 math_operator=operation,
                 load_path="final_8_4_1.pt",
-                optim=optim
+                optim=optim,
             ),
             Step(
                 1,
@@ -204,7 +260,7 @@ for operation in operations:
                 wd=1,  # 1e-4
                 math_operator=operation,
                 load_path="final_16_4_1.pt",
-                optim=optim
+                optim=optim,
             ),
             Step(
                 1,
@@ -215,7 +271,7 @@ for operation in operations:
                 wd=1,  # 1e-5
                 math_operator=operation,
                 load_path="final_32_4_1.pt",
-                optim=optim
+                optim=optim,
             ),
             Step(
                 1,
@@ -226,7 +282,7 @@ for operation in operations:
                 wd=1,  # 1e-5
                 math_operator=operation,
                 load_path="final_64_4_1.pt",
-                optim=optim
+                optim=optim,
             ),
             Step(
                 2,
@@ -237,7 +293,7 @@ for operation in operations:
                 wd=1,
                 math_operator=operation,
                 load_path="final_128_4_1.pt",
-                optim=optim
+                optim=optim,
             ),
         ]
         final_steps = steps2_h
