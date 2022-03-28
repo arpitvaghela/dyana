@@ -35,6 +35,7 @@ from grok.data import (
     ArithmeticDataset,
     ArithmeticIterator,
     PTBIterator,
+    get_ptb_dataset,
 )
 from grok.measure import get_sharpness
 from grok.transformer import Transformer
@@ -154,6 +155,13 @@ class TrainableTransformer(LightningModule):
                 operand_length=self.hparams.operand_length,  # type: ignore
                 data_dir=self.hparams.datadir,  # type: ignore
             )
+        else:
+            self.train_dataset = get_ptb_dataset(
+                train_pct=self.hparams.train_data_pct, data_dir=self.hparams.datadir
+            )
+            self.val_dataset = get_ptb_dataset(
+                train_pct=1, split="valid", data_dir=self.hparams.datadir
+            )
 
     def train_dataloader(self) -> ArithmeticIterator:  # type: ignore
         """
@@ -164,11 +172,9 @@ class TrainableTransformer(LightningModule):
         device = self.transformer.embedding.weight.device
         if self.hparams.dataset == "ptb":
             iterator = PTBIterator(
-                train_pct=self.hparams.train_data_pct,
-                batchsize_hint=self.hparams.batchsize,
+                dataset=self.train_dataset,
                 device=device,
-                split="train",
-                data_dir="../data",
+                batchsize=self.hparams.batchsize,
             )
 
         else:
@@ -192,11 +198,9 @@ class TrainableTransformer(LightningModule):
         device = self.transformer.embedding.weight.device
         if self.hparams.dataset == "ptb":
             iterator = PTBIterator(
-                train_pct=self.hparams.train_data_pct,
-                batchsize_hint=self.hparams.batchsize,
+                dataset=self.val_dataset,
                 device=device,
-                split="valid",
-                data_dir="../data",
+                batchsize=len(self.val_dataset),
             )
 
         else:
@@ -216,11 +220,9 @@ class TrainableTransformer(LightningModule):
         device = self.transformer.embedding.weight.device
         if self.hparams.dataset == "ptb":
             iterator = PTBIterator(
-                train_pct=self.hparams.train_data_pct,
-                batchsize_hint=self.hparams.batchsize,
+                dataset=self.val_dataset,
                 device=device,
-                split="test",
-                data_dir="../data",
+                batchsize=len(self.val_dataset),
             )
 
         else:
@@ -350,23 +352,23 @@ class TrainableTransformer(LightningModule):
 
         # Note: each sample must have exactly one '=' and all of them must
         # have it in the same position.
-        eq_token_index = self.train_dataset.tokenizer.stoi["="]
-        eq_position_t = torch.nonzero(y[0, :] == eq_token_index, as_tuple=False)
-        eq_position = int(eq_position_t.squeeze())
+        # eq_token_index = self.train_dataset.tokenizer.stoi["="]
+        # eq_position_t = torch.nonzero(y[0, :] == eq_token_index, as_tuple=False)
+        # eq_position = int(eq_position_t.squeeze())
 
         # only calculate loss/accuracy on right hand side of the equation
-        y_rhs = y[..., eq_position + 1 :]
-        y_hat_rhs = y_hat[..., eq_position + 1 :]
-        x_lhs = x[..., : eq_position + 1]
+        # y_rhs = y[..., eq_position + 1 :]
+        # y_hat_rhs = y_hat[..., eq_position + 1 :]
+        # x_lhs = x[..., : eq_position + 1]
 
         if train:
             coeff = float(batch["target"].shape[0]) / len(self.train_dataset)
         else:
             coeff = float(batch["target"].shape[0]) / len(self.val_dataset)
-        loss = F.cross_entropy(y_hat_rhs, y_rhs, reduction=reduction)
+        loss = F.cross_entropy(y_hat, y, reduction=reduction)
 
         with torch.no_grad():
-            acc = self._accuracy(y_hat_rhs, y_rhs)
+            acc = self._accuracy(y_hat, y)
             if reduction == "mean":
                 acc = acc.mean()
 
@@ -405,7 +407,7 @@ class TrainableTransformer(LightningModule):
                 else:
                     grad_vec = torch.cat((grad_vec, p.grad.data.view(-1)))
             return loss, grad_vec
-        return loss, acc, coeff, x_lhs, y_hat_rhs, attentions, values
+        return loss, acc, coeff, x, y_hat, attentions, values
 
     def _save_inputs(self, outputs: Dict, ds: str) -> None:
         """
