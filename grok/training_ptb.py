@@ -58,7 +58,8 @@ class TrainableTransformer(LightningModule):
         if type(hparams) == type({"a": 1}):
             hparams = Namespace(**hparams)
 
-        self.save_hyperparameters(hparams)
+        # self.save_hyperparameters(hparams)
+        self.hparams_in = hparams
         self.prepare_data()
         self.transformer = Transformer(
             hparams.n_layers,
@@ -66,9 +67,9 @@ class TrainableTransformer(LightningModule):
             hparams.d_model,
             hparams.dropout,
             hparams.max_context_len,
-            len(self.train_dataset.tokenizer),
+            len(self.train_dataset.vocab),
             hparams.non_linearity,
-            weight_noise=self.hparams.weight_noise,
+            weight_noise=self.hparams_in.weight_noise,
         )
         self.margin = torch.Tensor([0])
         self.next_epoch_to_eval = -1
@@ -89,7 +90,7 @@ class TrainableTransformer(LightningModule):
             "--batchsize",
             type=float,
             # default=0.25,
-            default=0,
+            default=512,
             help="-1 -> entire dataset, 0 -> auto-calculate, 0<N<1 -> fraction of dataset, N>1 -> N",
         )
         parser.add_argument(
@@ -102,7 +103,7 @@ class TrainableTransformer(LightningModule):
         parser.add_argument("--weight_noise", type=float, default=0.0)
         parser.add_argument("--non_linearity", type=str, default="relu")
         parser.add_argument("--max_context_len", type=int, default=50)
-        parser.add_argument("--dataset", type=str, default="bops")
+        parser.add_argument("--dataset", type=str, default="ptb")
         parser.add_argument("--math_operator", type=str, default="+")
         parser.add_argument(
             "--operand_length",
@@ -110,7 +111,7 @@ class TrainableTransformer(LightningModule):
             help="for list operations, the length of the lists",
         )
 
-        parser.add_argument("--train_data_pct", type=float, default=5)
+        parser.add_argument("--train_data_pct", type=float, default=0.5)
         parser.add_argument("--warmup_steps", type=int, default=10)
         parser.add_argument("--anneal_lr_steps", type=int, default=100000)
         parser.add_argument("--anneal_lr", dest="anneal_lr", action="store_true")
@@ -148,20 +149,23 @@ class TrainableTransformer(LightningModule):
         Loads training data to self.train_dataset
         Loads validation data to self.val_dataset
         """
-        if self.hparams.dataset == "bops":
-            (self.train_dataset, self.val_dataset,) = ArithmeticDataset.splits(
-                train_pct=self.hparams.train_data_pct,  # type: ignore
-                operator=self.hparams.math_operator,  # type: ignore
-                operand_length=self.hparams.operand_length,  # type: ignore
-                data_dir=self.hparams.datadir,  # type: ignore
-            )
-        else:
-            self.train_dataset = get_ptb_dataset(
-                train_pct=self.hparams.train_data_pct, data_dir=self.hparams.datadir
-            )
-            self.val_dataset = get_ptb_dataset(
-                train_pct=1, split="valid", data_dir=self.hparams.datadir
-            )
+        print(self.hparams_in)
+        # if self.hparams_in.dataset == "bops":
+        #     (self.train_dataset, self.val_dataset,) = ArithmeticDataset.splits(
+        #         train_pct=self.hparams_in.train_data_pct,  # type: ignore
+        #         operator=self.hparams_in.math_operator,  # type: ignore
+        #         operand_length=self.hparams_in.operand_length,  # type: ignore
+        #         data_dir=self.hparams_in.datadir,  # type: ignore
+        #     )
+        # else:
+        self.train_dataset = get_ptb_dataset(
+            train_pct=self.hparams_in.train_data_pct, data_dir=self.hparams_in.datadir
+        )
+        self.train_dataset.train = True
+        self.val_dataset = get_ptb_dataset(
+            train_pct=1, split="valid", data_dir=self.hparams_in.datadir
+        )
+        self.val_dataset.train = False
 
     def train_dataloader(self) -> ArithmeticIterator:  # type: ignore
         """
@@ -170,19 +174,19 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        if self.hparams.dataset == "ptb":
-            iterator = PTBIterator(
-                dataset=self.train_dataset,
-                device=device,
-                batchsize=self.hparams.batchsize,
-            )
+        # if self.hparams_in.dataset == "ptb":
+        iterator = PTBIterator(
+            dataset=self.train_dataset,
+            device=device,
+            batchsize=self.hparams_in.batchsize,
+        )
 
-        else:
-            iterator = ArithmeticIterator(
-                self.train_dataset,
-                device,
-                batchsize_hint=self.hparams.batchsize,  # type: ignore
-            )
+        # else:
+        #     iterator = ArithmeticIterator(
+        #         self.train_dataset,
+        #         device,
+        #         batchsize_hint=self.hparams_in.batchsize,  # type: ignore
+        #     )
 
         self.train_batchsize = iterator.batchsize
         self.batches_per_epoch = len(iterator)
@@ -196,19 +200,19 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        if self.hparams.dataset == "ptb":
-            iterator = PTBIterator(
-                dataset=self.val_dataset,
-                device=device,
-                batchsize=len(self.val_dataset),
-            )
+        # if self.hparams_in.dataset == "ptb":
+        iterator = PTBIterator(
+            dataset=self.val_dataset,
+            device=device,
+            batchsize=-1,
+        )
 
-        else:
-            iterator = ArithmeticIterator(
-                self.val_dataset,
-                device,
-                batchsize_hint=-1,  # no need to batch validation data
-            )
+        # else:
+        #     iterator = ArithmeticIterator(
+        #         self.val_dataset,
+        #         device,
+        #         batchsize_hint=-1,  # no need to batch validation data
+        #     )
         return iterator
 
     def test_dataloader(self) -> ArithmeticIterator:  # type: ignore
@@ -218,17 +222,17 @@ class TrainableTransformer(LightningModule):
         :returns: an iterator for self.train_dataset
         """
         device = self.transformer.embedding.weight.device
-        if self.hparams.dataset == "ptb":
-            iterator = PTBIterator(
-                dataset=self.val_dataset,
-                device=device,
-                batchsize=len(self.val_dataset),
-            )
+        # if self.hparams_in.dataset == "ptb":
+        iterator = PTBIterator(
+            dataset=self.val_dataset,
+            device=device,
+            batchsize=len(self.val_dataset),
+        )
 
-        else:
-            iterator = ArithmeticIterator(
-                self.val_dataset, device, batchsize_hint=-1  # type: ignore
-            )
+        # else:
+        #     iterator = ArithmeticIterator(
+        #         self.val_dataset, device, batchsize_hint=-1  # type: ignore
+        #     )
         return iterator
 
     def _scheduler_lr(self, step: int) -> float:
@@ -237,10 +241,10 @@ class TrainableTransformer(LightningModule):
 
         :returns: the learning_rate for this training step
         """
-        max_lr = self.hparams.max_lr  # type: ignore
-        min_lr = self.hparams.max_lr / 10  # type: ignore
-        warmup_steps = self.hparams.warmup_steps  # type: ignore
-        if not self.hparams.anneal_lr:
+        max_lr = self.hparams_in.max_lr  # type: ignore
+        min_lr = self.hparams_in.max_lr / 10  # type: ignore
+        warmup_steps = self.hparams_in.warmup_steps  # type: ignore
+        if not self.hparams_in.anneal_lr:
             if step <= warmup_steps:
                 lr = (float(step) / max(warmup_steps, 1)) * max_lr
             else:
@@ -248,9 +252,9 @@ class TrainableTransformer(LightningModule):
         else:
             if step <= warmup_steps:
                 lr = (float(step) / max(warmup_steps, 1)) * max_lr
-            elif step <= self.hparams.anneal_lr_steps + warmup_steps:
+            elif step <= self.hparams_in.anneal_lr_steps + warmup_steps:
                 effective_step = step - warmup_steps
-                t = effective_step / self.hparams.anneal_lr_steps
+                t = effective_step / self.hparams_in.anneal_lr_steps
                 cos = (1 + np.cos(np.pi * t)) / 2
                 lr = min_lr + (max_lr - min_lr) * cos
                 # lr = max_lr - ((effective_step / max_effective_step) * (max_lr - min_lr))
@@ -264,22 +268,22 @@ class TrainableTransformer(LightningModule):
 
         :returns: optimizers and schedulers.
         """
-        if self.hparams.optimizer == "AdamW":
+        if self.hparams_in.optimizer == "AdamW":
             optimizer = CustomAdamW(
                 self.parameters(),
                 betas=(0.9, 0.98),
                 eps=1e-8,
                 lr=1,
-                weight_decay=self.hparams.weight_decay,
-                noise_factor=self.hparams.noise_factor,
-                weight_decay_form=self.hparams.weight_decay_kind,
+                weight_decay=self.hparams_in.weight_decay,
+                noise_factor=self.hparams_in.noise_factor,
+                weight_decay_form=self.hparams_in.weight_decay_kind,
             )
-        if self.hparams.optimizer == "Adam":
+        if self.hparams_in.optimizer == "Adam":
             optimizer = torch.optim.Adam(
                 self.parameters(),
                 betas=(0.9, 0.98),
                 lr=1,
-                weight_decay=self.hparams.weight_decay,
+                weight_decay=self.hparams_in.weight_decay,
             )
         print(optimizer)
 
@@ -290,8 +294,8 @@ class TrainableTransformer(LightningModule):
         #     betas=(0.9, 0.98),
         #     eps=1e-8,
         #     lr=1,
-        #     weight_decay=self.hparams.weight_decay,
-        #     noise_factor=self.hparams.noise_factor,
+        #     weight_decay=self.hparams_in.weight_decay,
+        #     noise_factor=self.hparams_in.noise_factor,
         # )
         schedulers = [
             {
@@ -317,6 +321,7 @@ class TrainableTransformer(LightningModule):
         # find max prediction from output
         y_hat = torch.max(y_hat, dim=-2).indices  # batchsize x num_rhs_tokens
         row_accuracy = torch.min((y_hat == y), dim=-1).values  # shape: batchsize
+        print("Acc y shapes", y_hat.shape, y.shape)
         accuracy = row_accuracy.float() * 100  # shape: batchsize
         return accuracy
 
@@ -346,8 +351,10 @@ class TrainableTransformer(LightningModule):
         x = batch["text"]  # shape = batchsize * context_len
         y = batch["target"]  # shape = batchsize * context_len
         y_hat, attentions, values = self(
-            x=x, save_activations=self.hparams.save_activations  # type: ignore
+            x=x, save_activations=self.hparams_in.save_activations  # type: ignore
         )  # shape = batchsize * context_len * vocab_size
+        print("Y =>", y.shape, ("N", "Seq", "Vocab_size"))
+        print("Y_hat => ", y_hat.shape, ("N", "Seq", "Vocab_size"))
         y_hat = y_hat.transpose(-2, -1)  # shape = batchsize * vocab_size * context_len
 
         # Note: each sample must have exactly one '=' and all of them must
@@ -418,7 +425,7 @@ class TrainableTransformer(LightningModule):
                    these inputs are from.
         :param train: True is this is a training batch, false otherwise
         """
-        logdir = self.hparams.logdir + "/inputs/" + ds  # type: ignore
+        logdir = self.hparams_in.logdir + "/inputs/" + ds  # type: ignore
         os.makedirs(logdir, exist_ok=True)
         pickle_file = logdir + f"/{ds}.pt"
 
@@ -466,18 +473,18 @@ class TrainableTransformer(LightningModule):
         """
 
         output: Dict[str, Any] = {}
-        if self.hparams.save_outputs:  # type: ignore
+        if self.hparams_in.save_outputs:  # type: ignore
             y_hat_rhs = torch.cat([x["y_hat_rhs"] for x in outputs])
             output["y_hat_rhs"] = y_hat_rhs
-        if self.hparams.save_activations:  # type: ignore
+        if self.hparams_in.save_activations:  # type: ignore
             partial_attentions = list([o["partial_attentions"] for o in outputs])
             attentions = self._merge_batch_activations(partial_attentions)
             partial_values = list([o["partial_values"] for o in outputs])
             values = self._merge_batch_activations(partial_values)
             output["attentions"] = attentions
             output["values"] = values
-        if self.hparams.save_outputs or self.hparams.save_activations:  # type: ignore
-            logdir = self.hparams.logdir + "/outputs/" + ds  # type: ignore
+        if self.hparams_in.save_outputs or self.hparams_in.save_activations:  # type: ignore
+            logdir = self.hparams_in.logdir + "/outputs/" + ds  # type: ignore
             os.makedirs(logdir, exist_ok=True)
             pickle_file = logdir + f"/epoch_{self.current_epoch:010}.pt"
             with open(pickle_file, "wb") as fh:
@@ -518,7 +525,7 @@ class TrainableTransformer(LightningModule):
         }
         if self.current_epoch == 0:
             output["x_lhs"] = x_lhs
-        self.log("temp", 1)
+        # self.log("temp", 1)
 
         return output
 
@@ -554,7 +561,7 @@ class TrainableTransformer(LightningModule):
             # last_lr = outputs[-1]["learning_rate"]
             first_lr = outputs[0]["learning_rate"]
 
-            if self.hparams.save_activations or self.hparams.save_outputs:
+            if self.hparams_in.save_activations or self.hparams_in.save_outputs:
                 if self.current_epoch == 0:
                     self._save_inputs(outputs, ds="train")
                 self._save_activations(outputs, ds="train")
@@ -571,7 +578,7 @@ class TrainableTransformer(LightningModule):
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
             # for k, v in logs.items():
-            wandb.log(logs)
+            # wandb.log(logs)
 
     def validation_step(self, batch, batch_idx):
         """
@@ -626,7 +633,7 @@ class TrainableTransformer(LightningModule):
             perplexity = torch.exp(loss)
             accuracy = torch.stack([x["partial_val_accuracy"] for x in outputs]).sum()
 
-            if self.hparams.save_activations or self.hparams.save_outputs:
+            if self.hparams_in.save_activations or self.hparams_in.save_outputs:
                 if self.current_epoch == 0:
                     self._save_inputs(outputs, ds="val")
                 self._save_activations(outputs, ds="val")
@@ -655,7 +662,7 @@ class TrainableTransformer(LightningModule):
 
             # for k, v in logs.items():
             # self.log(k, v)
-            wandb.log(logs)
+            # wandb.log(logs)
 
         # save a checkpoint if the epoch is a power of 2
         if (
@@ -665,7 +672,7 @@ class TrainableTransformer(LightningModule):
         ):
             self.trainer.save_checkpoint(
                 os.path.join(
-                    self.hparams.checkpoint_path,
+                    self.hparams_in.checkpoint_path,
                     "epoch_" + str(self.current_epoch) + ".ckpt",
                 )
             )
@@ -733,14 +740,14 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    logger = WandbLogger(project="dyana", config=hparams.__dict__)
+    # logger = WandbLogger(project="dyana", config=hparams.__dict__)
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
-        logger = WandbLogger(
-            project="dyana", config=hparams.__dict__, resume=True, id=id
-        )
+        # logger = WandbLogger(
+        #     project="dyana", config=hparams.__dict__, resume=True, id=id
+        # )
 
     # Process the args
     if hparams.logdir is None:
@@ -813,9 +820,9 @@ def train(hparams: Namespace) -> None:
         "log_every_n_steps": 1,
     }
     # add expand_callback if expand size > 0
-    if hparams.log:
-        logger.watch(model)
-        trainer_args.update({"logger": logger})
+    # if hparams.log:
+    # logger.watch(model)
+    # trainer_args.update({"logger": logger})
 
     if torch.cuda.is_available() and hparams.gpu >= 0:
         trainer_args["gpus"] = [hparams.gpu]
@@ -904,7 +911,7 @@ def compute_sharpness(hparams: Namespace, ckpts) -> None:
 
     torch.save(model, os.path.join(checkpoint_path, "init.pt"))
 
-    logger = CSVLogger(hparams.logdir)
+    # logger = CSVLogger(hparams.logdir)
 
     trainer_args = {
         "max_steps": hparams.max_steps,
@@ -913,7 +920,7 @@ def compute_sharpness(hparams: Namespace, ckpts) -> None:
         "val_check_interval": 1,
         "profiler": False,
         # "checkpoint_callback": checkpointer,
-        "logger": logger,
+        # "logger": logger,
         "log_every_n_steps": 1,
         "flush_logs_every_n_steps": 1000,
     }

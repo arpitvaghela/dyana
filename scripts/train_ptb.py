@@ -2,13 +2,13 @@
 
 import os
 import grok
+from grok import training_ptb
 
-parser = grok.add_args()
-parser.set_defaults(logdir=os.environ.get("GROK_LOGDIR", "./log/exp_1"))
+parser = training_ptb.add_args()
+parser.set_defaults(logdir=os.environ.get("GROK_LOGDIR", "./logs/"))
 hparams = parser.parse_args()
 hparams.datadir = os.path.abspath(hparams.datadir)
 hparams.logdir = os.path.abspath(hparams.logdir)
 
-
 print(hparams)
-print(grok.training.train(hparams))
+print(training_ptb.train(hparams))

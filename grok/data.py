@@ -577,6 +577,8 @@ class PTBIterator(torch.utils.data.IterableDataset):
         :param shuffle: whether or not to randomly shuffle the dataset
         """
         self.dataset = dataset
+        if batchsize == -1:
+            batchsize = self.dataset.shape[0] // (bptt + 2)
         self.data = batchify(self.dataset, batchsize)
         self.device = device
         self.reset_iteration(shuffle=shuffle)
