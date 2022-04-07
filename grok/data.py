@@ -14,9 +14,9 @@ from torch import LongTensor, Tensor
 from torch.utils.data import dataset
 from tqdm import tqdm
 
-from torchtext.datasets import PennTreebank
-from torchtext.vocab import build_vocab_from_iterator
-from torchtext.data.utils import get_tokenizer
+# from torchtext.datasets import PennTreebank
+# from torchtext.vocab import build_vocab_from_iterator
+# from torchtext.data.utils import get_tokenizer
 
 VALID_OPERATORS = {
     "+": "addition",
@@ -484,38 +484,81 @@ class ArithmeticIterator(torch.utils.data.IterableDataset):
         :returns: the total number of batches
         """
         return math.ceil(len(self.dataset) / self.batchsize)
+# the tokenizer
+import re
+
+_patterns = [r'\'',
+             r'\"',
+             r'\.',
+             r'<br \/>',
+             r',',
+             r'\(',
+             r'\)',
+             r'\!',
+             r'\?',
+             r'\;',
+             r'\:',
+             r'\s+']
+
+_replacements = [' \'  ',
+                 '',
+                 ' . ',
+                 ' ',
+                 ' , ',
+                 ' ( ',
+                 ' ) ',
+                 ' ! ',
+                 ' ? ',
+                 ' ',
+                 ' ',
+                 ' ']
+
+_patterns_dict = list((re.compile(p), r) for p, r in zip(_patterns, _replacements))
 
 
-def get_ptb_dataset(train_pct: float, split: str = "train", data_dir: str = "../data"):
-    data_iter = PennTreebank(root=data_dir, split=split)
-    tokenizer = get_tokenizer("basic_english")
+def my_tokenizer(line):
+    line = line.lower()
+    for pattern_re, replaced_str in _patterns_dict:
+        line = pattern_re.sub(replaced_str, line)
+    return line.split()
 
-    if split != "train":
-        train_iter = PennTreebank(root=data_dir, split="train")
-        vocab = build_vocab_from_iterator(
-            map(tokenizer, train_iter), specials=["<unk>"]
-        )
-    else:
-        vocab = build_vocab_from_iterator(map(tokenizer, data_iter), specials=["<unk>"])
+# def get_ptb_dataset(train_pct: float, split: str = "train", data_dir: str = "../data"):
+#     data_iter = PennTreebank(root=data_dir, split=split)
+#     tokenizer = get_tokenizer("basic_english")
 
-    vocab.set_default_index(vocab["<unk>"])
+#     if split != "train":
+#         train_iter = PennTreebank(root=data_dir, split="train")
+#         vocab = build_vocab_from_iterator(
+#             map(tokenizer, train_iter), specials=["<unk>"]
+#         )
+#     else:
+#         vocab = build_vocab_from_iterator(map(tokenizer, data_iter), specials=["<unk>"])
 
-    def data_process(raw_text_iter: dataset.IterableDataset) -> torch.Tensor:
-        """Converts raw text into a flat Tensor."""
-        data = [
-            torch.tensor(vocab(tokenizer(item)), dtype=torch.long)
-            for item in raw_text_iter
-        ]
-        return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+#     vocab.set_default_index(vocab["<unk>"])
 
-    data = data_process(data_iter)
-    data = data[: int(train_pct * len(data))]
-    if split == "train":
-        data.train = True
-    data.tokenizer = tokenizer
+#     def data_process(raw_text_iter: dataset.IterableDataset) -> torch.Tensor:
+#         """Converts raw text into a flat Tensor."""
+#         data = [
+#             torch.tensor(vocab(tokenizer(item)), dtype=torch.long)
+#             for item in raw_text_iter
+#         ]
+#         return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+
+#     data = data_process(data_iter)
+#     data = data[: int(train_pct * len(data))]
+#     if split == "train":
+#         data.train = True
+#     data.tokenizer = tokenizer
+#     data.vocab = vocab
+#     return data
+
+def get_ptb_dataset(train_pct:float, split:str = "train", data_dir:str ="../data"):
+    data = torch.load(f"./data/ds/ptb_{split}.pt")
+    vocab = ["" for i in range(torch.max(data)+1)]
+    data = data[:int(train_pct*len(data))]
     data.vocab = vocab
+    data.tokenizer = my_tokenizer
     return data
-
 
 def batchify(data: torch.Tensor, bsz: int) -> Tensor:
     """Divides the data into bsz separate sequences, removing extra elements
@@ -534,7 +577,7 @@ def batchify(data: torch.Tensor, bsz: int) -> Tensor:
     return data
 
 
-bptt = 5
+bptt = 8
 
 
 def get_batch(source: torch.Tensor, i: int) -> Tuple[Tensor, Tensor]:
@@ -547,7 +590,7 @@ def get_batch(source: torch.Tensor, i: int) -> Tuple[Tensor, Tensor]:
         tuple (data, target), where data has shape [seq_len, batch_size] and
         target has shape [seq_len * batch_size]
     """
-    print(source.shape)
+    # print(source.shape)
     seq_len = min(bptt, source.size(1) - 1 - i)
     data = source[:, i : i + seq_len]
     target = source[:, i + 1 : i + 1 + seq_len]

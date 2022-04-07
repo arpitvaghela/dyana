@@ -111,7 +111,7 @@ class TrainableTransformer(LightningModule):
             help="for list operations, the length of the lists",
         )
 
-        parser.add_argument("--train_data_pct", type=float, default=0.5)
+        parser.add_argument("--train_data_pct", type=float, default=0.05)
         parser.add_argument("--warmup_steps", type=int, default=10)
         parser.add_argument("--anneal_lr_steps", type=int, default=100000)
         parser.add_argument("--anneal_lr", dest="anneal_lr", action="store_true")
@@ -163,7 +163,7 @@ class TrainableTransformer(LightningModule):
         )
         self.train_dataset.train = True
         self.val_dataset = get_ptb_dataset(
-            train_pct=1, split="valid", data_dir=self.hparams_in.datadir
+            train_pct=0.05, split="valid", data_dir=self.hparams_in.datadir
         )
         self.val_dataset.train = False
 
@@ -319,11 +319,15 @@ class TrainableTransformer(LightningModule):
         """
 
         # find max prediction from output
-        y_hat = torch.max(y_hat, dim=-2).indices  # batchsize x num_rhs_tokens
-        row_accuracy = torch.min((y_hat == y), dim=-1).values  # shape: batchsize
-        print("Acc y shapes", y_hat.shape, y.shape)
-        accuracy = row_accuracy.float() * 100  # shape: batchsize
-        return accuracy
+        try:
+            y_hat = torch.max(y_hat, dim=-2).indices  # batchsize x num_rhs_tokens
+            row_accuracy = torch.min((y_hat == y), dim=-1).values  # shape: batchsize
+            # print("Acc y shapes", y_hat.shape, y.shape)
+            accuracy = row_accuracy.float() * 100  # shape: batchsize
+            return accuracy
+        except IndexError as e:
+            print(y_hat.shape, y.shape)
+            raise e
 
     def _step(
         self,
@@ -353,8 +357,6 @@ class TrainableTransformer(LightningModule):
         y_hat, attentions, values = self(
             x=x, save_activations=self.hparams_in.save_activations  # type: ignore
         )  # shape = batchsize * context_len * vocab_size
-        print("Y =>", y.shape, ("N", "Seq", "Vocab_size"))
-        print("Y_hat => ", y_hat.shape, ("N", "Seq", "Vocab_size"))
         y_hat = y_hat.transpose(-2, -1)  # shape = batchsize * vocab_size * context_len
 
         # Note: each sample must have exactly one '=' and all of them must
@@ -653,12 +655,27 @@ class TrainableTransformer(LightningModule):
 
             # train accuracy
             device = self.transformer.embedding.weight.device
-            train_data = self.train_dataset.data.to(device)
-            training_data = {"text": train_data[:, :-1], "target": train_data[:, 1:]}
-            with torch.no_grad():
-                tr_loss, tr_acc, *_ = self._step(training_data, 0)
-                logs["full_train_loss"] = tr_loss
-                logs["full_train_acc"] = tr_acc
+            # train_data = self.train_dataset.data.to(device)
+            # training_data = {"text": train_data[:, :-1], "target": train_data[:, 1:]}
+            # tr_loss_arr = []
+            # tr_acc_arr = []
+            # with torch.no_grad():
+            #     for batch_idx, batch in enumerate(self.train_dataloader()):
+            #         (
+            #             loss_batch,
+            #             accuracy_batch,
+            #             coeff,
+            #             x_lhs,
+            #             y_hat_rhs,
+            #             attentions,
+            #             values,
+            #         ) = self._step(batch=batch, batch_idx=batch_idx, train=False)
+            #         tr_loss_arr.append(loss_batch)
+            #         tr_acc_arr.append(accuracy_batch)
+
+            #     # tr_loss, tr_acc, *_ = self._step(training_data, 0)
+            #     logs["full_train_loss"] = torch.tensor(tr_loss_arr).mean()
+            #     logs["full_train_acc"] = torch.tensor(tr_acc_arr).mean()
 
             # for k, v in logs.items():
             # self.log(k, v)
