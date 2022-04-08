@@ -518,10 +518,10 @@ class TrainableTransformer(LightningModule):
         lr = schedulers["scheduler"].optimizer.param_groups[0]["lr"]
         output = {
             "loss": loss,
-            "partial_train_loss": coeff * loss,
-            "partial_train_accuracy": coeff * accuracy,
-            "learning_rate": torch.tensor([lr]),
-            "y_hat_rhs": y_hat_rhs,
+            "partial_train_loss": (coeff * loss).detach(),
+            "partial_train_accuracy": (coeff * accuracy).detach(),
+            "learning_rate": torch.tensor([lr]).detach(),
+            "y_hat_rhs": (y_hat_rhs).detach(),
             "partial_attentions": attentions,
             "partial_values": values,
         }
@@ -787,11 +787,11 @@ def train(hparams: Namespace) -> None:
     hparams.d_key = hparams.d_model / hparams.n_heads
 
     # Set up the RNGs for repeatability
-    if hparams.random_seed != -1:
-        torch.manual_seed(hparams.random_seed)
-        torch.cuda.manual_seed(hparams.random_seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    # if hparams.random_seed != -1:
+    torch.manual_seed(hparams.random_seed)
+    torch.cuda.manual_seed(hparams.random_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     checkpoint_path = hparams.logdir + "/checkpoints"
     os.makedirs(checkpoint_path, exist_ok=True)
@@ -841,8 +841,8 @@ def train(hparams: Namespace) -> None:
     # logger.watch(model)
     # trainer_args.update({"logger": logger})
 
-    if torch.cuda.is_available() and hparams.gpu >= 0:
-        trainer_args["gpus"] = [hparams.gpu]
+    # if torch.cuda.is_available() and hparams.gpu >= 0:
+    #     trainer_args["gpus"] = [hparams.gpu]
 
     trainer = Trainer(**trainer_args)
 

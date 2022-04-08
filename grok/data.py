@@ -484,34 +484,40 @@ class ArithmeticIterator(torch.utils.data.IterableDataset):
         :returns: the total number of batches
         """
         return math.ceil(len(self.dataset) / self.batchsize)
+
+
 # the tokenizer
 import re
 
-_patterns = [r'\'',
-             r'\"',
-             r'\.',
-             r'<br \/>',
-             r',',
-             r'\(',
-             r'\)',
-             r'\!',
-             r'\?',
-             r'\;',
-             r'\:',
-             r'\s+']
+_patterns = [
+    r"\'",
+    r"\"",
+    r"\.",
+    r"<br \/>",
+    r",",
+    r"\(",
+    r"\)",
+    r"\!",
+    r"\?",
+    r"\;",
+    r"\:",
+    r"\s+",
+]
 
-_replacements = [' \'  ',
-                 '',
-                 ' . ',
-                 ' ',
-                 ' , ',
-                 ' ( ',
-                 ' ) ',
-                 ' ! ',
-                 ' ? ',
-                 ' ',
-                 ' ',
-                 ' ']
+_replacements = [
+    " '  ",
+    "",
+    " . ",
+    " ",
+    " , ",
+    " ( ",
+    " ) ",
+    " ! ",
+    " ? ",
+    " ",
+    " ",
+    " ",
+]
 
 _patterns_dict = list((re.compile(p), r) for p, r in zip(_patterns, _replacements))
 
@@ -521,6 +527,7 @@ def my_tokenizer(line):
     for pattern_re, replaced_str in _patterns_dict:
         line = pattern_re.sub(replaced_str, line)
     return line.split()
+
 
 # def get_ptb_dataset(train_pct: float, split: str = "train", data_dir: str = "../data"):
 #     data_iter = PennTreebank(root=data_dir, split=split)
@@ -552,13 +559,16 @@ def my_tokenizer(line):
 #     data.vocab = vocab
 #     return data
 
-def get_ptb_dataset(train_pct:float, split:str = "train", data_dir:str ="../data"):
+
+def get_ptb_dataset(train_pct: float, split: str = "train", data_dir: str = "../data"):
     data = torch.load(f"./data/ds/ptb_{split}.pt")
-    vocab = ["" for i in range(torch.max(data)+1)]
-    data = data[:int(train_pct*len(data))]
+    vocab = ["" for i in range(torch.max(data) + 1)]
+    data = data[: int(train_pct * len(data))]
+    torch.cuda.empty_cache()
     data.vocab = vocab
     data.tokenizer = my_tokenizer
     return data
+
 
 def batchify(data: torch.Tensor, bsz: int) -> Tensor:
     """Divides the data into bsz separate sequences, removing extra elements
@@ -648,10 +658,13 @@ class PTBIterator(torch.utils.data.IterableDataset):
         :returns: batch tensor of shape (self.batchsize, tokens_per_eq)
         """
         self.index += 1
+        if self.index > len(self) - 1:
+            self.reset_iteration()
+            raise StopIteration
         return get_batch(self.data, self.index)
 
     def __len__(self) -> int:
         """
         :returns: the total number of batches
         """
-        return math.ceil(len(self.dataset) / self.batchsize)
+        return self.data.size(1) - bptt - 1
