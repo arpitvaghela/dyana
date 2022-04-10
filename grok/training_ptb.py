@@ -8,7 +8,6 @@ import logging
 import math
 import os
 import pickle
-from runpy import run_path
 import sys
 import time
 from argparse import ArgumentParser, Namespace
@@ -20,11 +19,10 @@ import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule, Trainer
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
-from pytorch_lightning.loggers import CSVLogger, WandbLogger
+from pytorch_lightning.loggers import WandbLogger
 from torch import Tensor
 from torch.optim.lr_scheduler import LambdaLR
 from grok.knowledge_transfer import knowledge_transfer
-from datetime import datetime
 
 import grok.metrics as metrics
 from grok import transformer
@@ -90,7 +88,7 @@ class TrainableTransformer(LightningModule):
             "--batchsize",
             type=float,
             # default=0.25,
-            default=512,
+            default=32,
             help="-1 -> entire dataset, 0 -> auto-calculate, 0<N<1 -> fraction of dataset, N>1 -> N",
         )
         parser.add_argument(
@@ -111,7 +109,7 @@ class TrainableTransformer(LightningModule):
             help="for list operations, the length of the lists",
         )
 
-        parser.add_argument("--train_data_pct", type=float, default=0.05)
+        parser.add_argument("--train_data_pct", type=float, default=0.001)
         parser.add_argument("--warmup_steps", type=int, default=10)
         parser.add_argument("--anneal_lr_steps", type=int, default=100000)
         parser.add_argument("--anneal_lr", dest="anneal_lr", action="store_true")
@@ -149,7 +147,7 @@ class TrainableTransformer(LightningModule):
         Loads training data to self.train_dataset
         Loads validation data to self.val_dataset
         """
-        print(self.hparams_in)
+        # print(self.hparams_in)
         # if self.hparams_in.dataset == "bops":
         #     (self.train_dataset, self.val_dataset,) = ArithmeticDataset.splits(
         #         train_pct=self.hparams_in.train_data_pct,  # type: ignore
@@ -163,7 +161,7 @@ class TrainableTransformer(LightningModule):
         )
         self.train_dataset.train = True
         self.val_dataset = get_ptb_dataset(
-            train_pct=0.05, split="valid", data_dir=self.hparams_in.datadir
+            train_pct=1, split="valid", data_dir=self.hparams_in.datadir
         )
         self.val_dataset.train = False
 
@@ -213,6 +211,7 @@ class TrainableTransformer(LightningModule):
         #         device,
         #         batchsize_hint=-1,  # no need to batch validation data
         #     )
+        print("[training_ptb:214] Validation dataloader created")
         return iterator
 
     def test_dataloader(self) -> ArithmeticIterator:  # type: ignore
@@ -415,7 +414,10 @@ class TrainableTransformer(LightningModule):
                     grad_vec = p.grad.data.view(-1)
                 else:
                     grad_vec = torch.cat((grad_vec, p.grad.data.view(-1)))
+
+            del x, batch
             return loss, grad_vec
+        del batch
         return loss, acc, coeff, x, y_hat, attentions, values
 
     def _save_inputs(self, outputs: Dict, ds: str) -> None:
@@ -580,7 +582,8 @@ class TrainableTransformer(LightningModule):
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
             # for k, v in logs.items():
-            # wandb.log(logs)
+            #    self.log(k, v)
+            wandb.log(logs)
 
     def validation_step(self, batch, batch_idx):
         """
@@ -592,6 +595,7 @@ class TrainableTransformer(LightningModule):
         :returns: a dict with val_loss, val_accuracy, probabilities of solutions,
                   attentions, and values
         """
+        print("[training_ptb:598] Running validation step")
         if self.next_epoch_to_eval < self.current_epoch:
             self.next_epoch_to_eval = self.current_epoch
         if self.current_epoch != self.next_epoch_to_eval:
@@ -678,8 +682,10 @@ class TrainableTransformer(LightningModule):
             #     logs["full_train_acc"] = torch.tensor(tr_acc_arr).mean()
 
             # for k, v in logs.items():
-            # self.log(k, v)
-            # wandb.log(logs)
+            #    self.log(k, v)
+            print("[training_ptb:686] Running validation end")
+            print(logs)
+            wandb.log(logs)
 
         # save a checkpoint if the epoch is a power of 2
         if (
@@ -757,14 +763,17 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    # logger = WandbLogger(project="dyana", config=hparams.__dict__)
+    logger = WandbLogger(project="dyana_ptb", config=hparams.__dict__)
+
+    # wandb.init(project="dyana_ptb", config=hparams.__dict__)
+
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
-        # logger = WandbLogger(
-        #     project="dyana", config=hparams.__dict__, resume=True, id=id
-        # )
+        logger = WandbLogger(
+            project="dyana_ptb", config=hparams.__dict__, resume=True, id=id
+        )
 
     # Process the args
     if hparams.logdir is None:
@@ -801,10 +810,10 @@ def train(hparams: Namespace) -> None:
     model = TrainableTransformer(hparams).float()
 
     # # Continue training a single model
-    # if hparams.resume and hparams.load_path and hparams.run_path:
-    #     # record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
-    #     model = TrainableTransformer.load_from_checkpoint(hparams.load_path)
-    #     model = model.float()
+    if hparams.resume and hparams.load_path and hparams.run_path:
+        # record = wandb.restore(hparams.load_path, run_path=hparams.run_path)
+        model = TrainableTransformer.load_from_checkpoint(hparams.load_path)
+        model = model.float()
 
     if hparams.load_path:
         knowledge_transfer(model, hparams.load_path)
@@ -829,23 +838,23 @@ def train(hparams: Namespace) -> None:
         "max_steps": hparams.max_steps,
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
-        "val_check_interval": 1,
-        "check_val_every_n_epoch": 10,
+        "val_check_interval": 1.0,
+        "check_val_every_n_epoch": 1,
         "profiler": False,
         "callbacks": [checkpointer],
         # "logger": logger,
         "log_every_n_steps": 1,
     }
     # add expand_callback if expand size > 0
-    # if hparams.log:
-    # logger.watch(model)
-    # trainer_args.update({"logger": logger})
+    if hparams.log:
+        # logger.watch(model)
+        trainer_args.update({"logger": logger})
 
-    # if torch.cuda.is_available() and hparams.gpu >= 0:
-    #     trainer_args["gpus"] = [hparams.gpu]
+    if torch.cuda.is_available() and hparams.gpu >= 0:
+        trainer_args["gpus"] = [hparams.gpu]
 
     trainer = Trainer(**trainer_args)
-
+    print(trainer.logger)
     trainer.fit(model=model)  # type: ignore
 
     trainer.save_checkpoint(
@@ -860,14 +869,14 @@ def train(hparams: Namespace) -> None:
             f"{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
         )
     )
-    print(type(model))
+    print("[trainer_ptb:872] ", type(model))
     path = os.path.join(
         checkpoint_path,
         f"final_{hparams.d_model}_{hparams.n_heads}_{hparams.n_layers}.pt",
     )
 
     torch.save({"model": model.state_dict(), "hparams": hparams}, path)
-
+    print("Model Saved")
     """
     margin = np.percentile(model.margin.detach().cpu().numpy(), 5)
     device = transformer.embedding.weight.device
@@ -980,7 +989,7 @@ def add_args(parser=None) -> Namespace:
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--max_epochs", type=int, default=None)
     parser.add_argument("--max_steps", type=int, default=1000000)
-    parser.add_argument("--log", type=bool, default=False)
+    parser.add_argument("--log", type=bool, default=True)
     parser.add_argument("--load_path", type=str, default=None)
     parser.add_argument("--resume", type=bool, default=False)
     parser.add_argument("--run_path", type=str, default=None)

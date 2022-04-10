@@ -12,3 +12,4 @@ hparams.logdir = os.path.abspath(hparams.logdir)
 
 print(hparams)
 print(training_ptb.train(hparams))
+print("Finished")
