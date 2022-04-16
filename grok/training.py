@@ -697,13 +697,13 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    logger = WandbLogger(project="dyana", config=hparams.__dict__)
+    logger = WandbLogger(project="grok2", config=hparams.__dict__)
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
         logger = WandbLogger(
-            project="dyana", config=hparams.__dict__, resume=True, id=id
+            project="grok2", config=hparams.__dict__, resume=True, id=id
         )
 
     # Process the args
