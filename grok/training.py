@@ -772,13 +772,13 @@ def train(hparams: Namespace) -> None:
         every_n_train_steps=10000,
         verbose=True,
     )
-    reached_acc_callback = EarlyStopping(
-        monitor="val_accuracy",
-        stopping_threshold=99.5,
-        patience=3,
-        verbose=False,
-        mode="max",
-    )
+    # reached_acc_callback = EarlyStopping(
+    #     monitor="val_accuracy",
+    #     stopping_threshold=99.5,
+    #     patience=3,
+    #     verbose=False,
+    #     mode="max",
+    # )
     trainer_args = {
         "max_steps": hparams.max_steps,
         "min_steps": hparams.max_steps,
@@ -786,7 +786,7 @@ def train(hparams: Namespace) -> None:
         # "val_check_interval": 1,
         "check_val_every_n_epoch": 10,
         "profiler": False,
-        "callbacks": [checkpointer, reached_acc_callback],
+        "callbacks": [checkpointer],
         # "logger": logger,
         "log_every_n_steps": 1,
     }
