@@ -780,7 +780,7 @@ def train(hparams: Namespace) -> None:
         # "val_check_interval": 1,
         "check_val_every_n_epoch": 10,
         "profiler": False,
-        "callbacks": [checkpointer],
+        "callbacks": [checkpointer, reached_acc_callback],
         # "logger": logger,
         "log_every_n_steps": 1,
     }
