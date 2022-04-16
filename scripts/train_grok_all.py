@@ -31,7 +31,7 @@ operations = [
     ("x**2+y**2+x*y+x_mod_97", datapct_range2),
     ("x**3+x*y_mod_97", datapct_range2),
     ("x**3+x*y**2+y_mod_97", datapct_range3),
-    ("S5", datapct_range1),
+    ("s5", datapct_range1),
     ("s5conj", datapct_range2),
     ("s5aba", datapct_range2)
 ]
