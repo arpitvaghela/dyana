@@ -1,15 +1,9 @@
 #!/usr/bin/env python
 
 import argparse
-import copy
-import functools
-import json
-import logging
 import math
 import os
 import pickle
-from runpy import run_path
-import sys
 import time
 from argparse import ArgumentParser, Namespace
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -19,7 +13,7 @@ import pytorch_lightning
 import torch
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule, Trainer
-from pytorch_lightning.callbacks import Callback, ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import CSVLogger, WandbLogger
 from torch import Tensor
 from torch.optim.lr_scheduler import LambdaLR
@@ -71,6 +65,8 @@ class TrainableTransformer(LightningModule):
         self.margin = torch.Tensor([0])
         self.next_epoch_to_eval = -1
         self.next_train_epoch_to_log = 0
+        self.best_val_acc = -1.0
+        self.best_train_acc = -1.0
 
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
@@ -534,6 +530,8 @@ class TrainableTransformer(LightningModule):
                 "time_per_epoch": time.time() - self.training_epoch_start_time,
                 "fwd_time_in_epoch": self.fwd_time_in_epoch,
             }
+            if self.best_train_acc < accuracy:
+                logs["best_train_accuracy"] = accuracy
             # for k, v in logs.items():
             wandb.log(logs)
 
@@ -600,6 +598,9 @@ class TrainableTransformer(LightningModule):
                 "val_accuracy": accuracy,
                 "val_perplexity": perplexity,
             }
+            if self.best_val_acc < accuracy:
+                logs["best_val_accuracy"] = accuracy
+
             for name, param in self.named_parameters():
                 # n parameters
                 n_params = param.numel()
@@ -765,11 +766,18 @@ def train(hparams: Namespace) -> None:
         every_n_train_steps=10000,
         verbose=True,
     )
+    reached_acc_callback = EarlyStopping(
+        monitor="val_accuracy",
+        stopping_threshold=99.5,
+        patience=3,
+        verbose=False,
+        mode="max",
+    )
     trainer_args = {
         "max_steps": hparams.max_steps,
         "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
-        "val_check_interval": 1,
+        # "val_check_interval": 1,
         "check_val_every_n_epoch": 10,
         "profiler": False,
         "callbacks": [checkpointer],

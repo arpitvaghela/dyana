@@ -22,7 +22,7 @@ datapct_range2 = [x for x in range(20, 100, 5)]
 datapct_range3 = [x for x in range(30, 100, 5)]
 
 operations = [
-    ("+",  datapct_range1),
+    ("+", datapct_range1),
     ("-", datapct_range1),
     ("/", datapct_range1),
     ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
@@ -33,9 +33,9 @@ operations = [
     ("x**3+x*y**2+y_mod_97", datapct_range3),
     ("s5", datapct_range1),
     ("s5conj", datapct_range2),
-    ("s5aba", datapct_range2)
+    ("s5aba", datapct_range2),
 ]
-for op,datapct_range in operations:
+for op, datapct_range in operations:
     for data_pct in datapct_range:
         run = wandb.init(project="grok2")
         wandb.finish()
