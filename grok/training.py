@@ -67,6 +67,7 @@ class TrainableTransformer(LightningModule):
         self.next_train_epoch_to_log = 0
         self.best_val_acc = -1.0
         self.best_train_acc = -1.0
+        self.last_val_acc = 0.0
 
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
@@ -598,6 +599,7 @@ class TrainableTransformer(LightningModule):
                 "val_accuracy": accuracy,
                 "val_perplexity": perplexity,
             }
+            self.last_val_acc = accuracy
             if self.best_val_acc < accuracy:
                 logs["best_val_accuracy"] = accuracy
 
@@ -622,6 +624,10 @@ class TrainableTransformer(LightningModule):
             # self.log(k, v)
             wandb.log(logs)
 
+        else:
+            logs = {
+                "val_accuracy": self.last_val_acc,
+            }
         # save a checkpoint if the epoch is a power of 2
         if (
             self.current_epoch > 0
@@ -634,8 +640,8 @@ class TrainableTransformer(LightningModule):
                     "epoch_" + str(self.current_epoch) + ".ckpt",
                 )
             )
-        if validation_is_real:
-            return logs
+        # if validation_is_real:
+        return logs
 
     def test_step(self, batch, batch_idx):
         """
