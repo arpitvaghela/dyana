@@ -17,17 +17,25 @@ def get_command_str(train_data_pct, math_operator, run_path: str):
     return cmd + f" --resume 1 --run_path {run_path} "
 
 
-datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
+datapct_range1 = [x for x in range(10, 100, 5)]
+datapct_range2 = [x for x in range(20, 100, 5)]
+datapct_range3 = [x for x in range(30, 100, 5)]
+
 operations = [
-    # "(x._value//y)if(y._value%2==1)else(x-y)_mod_97",
-    "x**2+y**2+x*y_mod_97",
-    "x**2+y**2+x*y+x_mod_97",
-    "x**3+x*y_mod_97",
-    "x**3+x*y**2+y_mod_97",
-    "s5conj",
-    "s5aba",
+    ("+",  datapct_range1),
+    ("-", datapct_range1),
+    ("/", datapct_range1),
+    ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
+    ("x**2+y**2_mod_97", datapct_range1),
+    ("x**2+y**2+x*y_mod_97", datapct_range2),
+    ("x**2+y**2+x*y+x_mod_97", datapct_range2),
+    ("x**3+x*y_mod_97", datapct_range2),
+    ("x**3+x*y**2+y_mod_97", datapct_range3),
+    ("s5", datapct_range1),
+    ("s5conj", datapct_range2),
+    ("s5aba", datapct_range2)
 ]
-for op in operations:
+for op,datapct_range in operations:
     for data_pct in datapct_range:
         run = wandb.init(project="grok2")
         wandb.finish()

@@ -80,17 +80,27 @@ datapct_range = [20, 30, 40, 50, 60, 70, 80, 90]
 # "s5conj": "s5conj",
 # "s5aba": "s5aba",
 # operations = ["+", "-", "/", "x**2+y**2_mod_97"]
+
+datapct_range1 = [x for x in range(10, 100, 5)]
+datapct_range2 = [x for x in range(20, 100, 5)]
+datapct_range3 = [x for x in range(30, 100, 5)]
+
 operations = [
-    # "(x._value//y)if(y._value%2==1)else(x-y)_mod_97",
-    "x**2+y**2+x*y_mod_97",
-    "x**2+y**2+x*y+x_mod_97",
-    "x**3+x*y_mod_97",
-    "x**3+x*y**2+y_mod_97",
-    "s5conj",
-    "s5aba",
+    ("+",  datapct_range1),
+    ("-", datapct_range1),
+    ("/", datapct_range1),
+    ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
+    ("x**2+y**2_mod_97", datapct_range1),
+    ("x**2+y**2+x*y_mod_97", datapct_range2),
+    ("x**2+y**2+x*y+x_mod_97", datapct_range2),
+    ("x**3+x*y_mod_97", datapct_range2),
+    ("x**3+x*y**2+y_mod_97", datapct_range3),
+    ("S5", datapct_range1),
+    ("s5conj", datapct_range2),
+    ("s5aba", datapct_range2)
 ]
 optim = "AdamW"
-for operation in operations:
+for operation,datapct_range in operations:
     for datapct in datapct_range:
         steps1_5 = [
             Step(1, 2, 8, datapct, 2_500, math_operator=operation),
