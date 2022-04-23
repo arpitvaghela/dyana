@@ -617,9 +617,9 @@ class TrainableTransformer(LightningModule):
                 tr_loss, tr_acc, *_ = self._step(training_data, 0)
                 logs["full_train_loss"] = tr_loss
                 logs["full_train_acc"] = tr_acc
-        # else:
-        #     logs = {"val_accuracy": self.prev_val_acc}
-        
+            # else:
+            #     logs = {"val_accuracy": self.prev_val_acc}
+
             for k, v in logs.items():
                 self.log(k, v)
 
@@ -768,15 +768,27 @@ def train(hparams: Namespace) -> None:
         dirpath=checkpoint_path,
         every_n_train_steps=10000,
         verbose=True,
-    ) 
-    reached_acc_callback = EarlyStopping(
-        monitor="val_accuracy",
-        stopping_threshold=99.5,
-        patience=float("inf"),
-        min_delta=0.0,
-        verbose=True,
-        mode="max",
     )
+    if hparams.d_model == 128 and hparams.n_head == 4 and hparams.n_layers == 2:
+        early_stop = EarlyStopping(
+            monitor="val_accuracy",
+            stopping_threshold=99.5,
+            patience=float("inf"),
+            min_delta=0.0,
+            verbose=True,
+            mode="max",
+        )
+    else:
+        early_stop = EarlyStopping(
+            monitor="val_loss",
+            stopping_threshold=99.5,
+            patience=250,
+            min_delta=0.0,
+            verbose=True,
+            mode="min",
+        )
+
+    print(early_stop)
 
     trainer_args = {
         "max_steps": hparams.max_steps,
@@ -785,7 +797,7 @@ def train(hparams: Namespace) -> None:
         # "val_check_interval": 1,
         "check_val_every_n_epoch": 10,
         "profiler": False,
-        "callbacks": [checkpointer, reached_acc_callback],
+        "callbacks": [checkpointer, early_stop],
         # "logger": logger,
         "log_every_n_steps": 1,
     }
