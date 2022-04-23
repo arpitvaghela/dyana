@@ -67,7 +67,6 @@ class TrainableTransformer(LightningModule):
         self.next_train_epoch_to_log = 0
         self.best_val_acc = -1.0
         self.best_train_acc = -1.0
-        self.prev_val_acc = 0.0
 
     @staticmethod
     def add_model_specific_args(parser: ArgumentParser) -> ArgumentParser:
@@ -602,7 +601,6 @@ class TrainableTransformer(LightningModule):
             if self.best_val_acc < accuracy:
                 logs["best_val_accuracy"] = accuracy
 
-            self.prev_val_acc = accuracy
             for name, param in self.named_parameters():
                 # n parameters
                 n_params = param.numel()
@@ -619,12 +617,13 @@ class TrainableTransformer(LightningModule):
                 tr_loss, tr_acc, *_ = self._step(training_data, 0)
                 logs["full_train_loss"] = tr_loss
                 logs["full_train_acc"] = tr_acc
-        else:
-            logs = {"val_accuracy": self.prev_val_acc}
-            # for k, v in logs.items():
-            # self.log(k, v)
+        # else:
+        #     logs = {"val_accuracy": self.prev_val_acc}
+        
+            for k, v in logs.items():
+                self.log(k, v)
 
-        wandb.log(logs)
+        # wandb.log(logs)
 
         # save a checkpoint if the epoch is a power of 2
         if (
@@ -769,18 +768,19 @@ def train(hparams: Namespace) -> None:
         dirpath=checkpoint_path,
         every_n_train_steps=10000,
         verbose=True,
-    )
+    ) 
     reached_acc_callback = EarlyStopping(
         monitor="val_accuracy",
         stopping_threshold=99.5,
-        patience=3,
-        verbose=False,
+        patience=float("inf"),
+        min_delta=0.0,
+        verbose=True,
         mode="max",
     )
 
     trainer_args = {
         "max_steps": hparams.max_steps,
-        "min_steps": hparams.max_steps,
+        # "min_steps": hparams.max_steps,
         "max_epochs": int(1e8),
         # "val_check_interval": 1,
         "check_val_every_n_epoch": 10,

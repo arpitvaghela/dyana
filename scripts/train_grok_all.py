@@ -36,10 +36,12 @@ operations = [
     ("s5aba", datapct_range2),
 ]
 for op, datapct_range in operations:
-    for data_pct in datapct_range:
+    for data_pct in [80]:
         run = wandb.init(project="grok2")
         wandb.finish()
         path = os.path.join("logs", f"{run.id}")
         os.makedirs(path, exist_ok=True)
         cmd = get_command_str(data_pct, op, run.path)
         os.system(cmd)
+        break
+    break
