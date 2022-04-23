@@ -701,13 +701,13 @@ def train(hparams: Namespace) -> None:
     :param hparams: An argparse.Namespace with all of the relevant hyperparameters
     """
 
-    logger = WandbLogger(project="grok2", config=hparams.__dict__)
+    logger = WandbLogger(project="dyana", config=hparams.__dict__)
     if hparams.resume:
         r_path = hparams.run_path
         id = r_path.split("/")[-1]
         print(id)
         logger = WandbLogger(
-            project="grok2", config=hparams.__dict__, resume=True, id=id
+            project="dyana", config=hparams.__dict__, resume=True, id=id
         )
 
     # Process the args
@@ -769,26 +769,22 @@ def train(hparams: Namespace) -> None:
         every_n_train_steps=10000,
         verbose=True,
     )
-    if hparams.d_model == 128 and hparams.n_head == 4 and hparams.n_layers == 2:
-        early_stop = EarlyStopping(
+    early_stop = EarlyStopping(
             monitor="val_accuracy",
             stopping_threshold=99.5,
             patience=float("inf"),
             min_delta=0.0,
             verbose=True,
             mode="max",
-        )
-    else:
-        early_stop = EarlyStopping(
-            monitor="val_loss",
-            stopping_threshold=99.5,
-            patience=250,
-            min_delta=0.0,
-            verbose=True,
-            mode="min",
-        )
-
-    print(early_stop)
+    )
+    # if not (hparams.d_model == 128 and hparams.n_heads == 4 and hparams.n_layers == 2):
+    #     early_stop = EarlyStopping(
+    #         monitor="val_loss",
+    #         patience=50,
+    #         min_delta=0.0,
+    #         verbose=True,
+    #         mode="min",
+    #     )
 
     trainer_args = {
         "max_steps": hparams.max_steps,

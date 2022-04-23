@@ -100,7 +100,7 @@ operations = [
     ("s5aba", datapct_range2),
 ]
 optim = "AdamW"
-for operation, datapct_range in ("+", [15, 20, 25, 30, 40]):
+for operation, datapct_range in [("-", [10,15, 20,25]), ("/", [10,15, 20,25]), ("+", [10,15, 20,25])]:
     for datapct in datapct_range:
         steps1_5 = [
             Step(1, 2, 8, datapct, 2_500, math_operator=operation),
@@ -307,7 +307,7 @@ for operation, datapct_range in ("+", [15, 20, 25, 30, 40]):
             ),
         ]
         stepsop = [
-            Step(1, 4, 8, datapct, 1_000, wd=1, math_operator=operation, optim=optim),
+            Step(1, 4, 8, datapct, 2_000, wd=1, math_operator=operation, optim=optim),
             Step(
                 2,
                 4,
@@ -405,6 +405,191 @@ for operation, datapct_range in ("+", [15, 20, 25, 30, 40]):
                 wd=1,
                 math_operator=operation,
                 load_path="final_112_4_2.pt",
+                optim=optim,
+            ),
+        ]
+        stepsop_s = [
+            Step(1, 4, 8, datapct, 1_000, wd=1, math_operator=operation, optim=optim),
+            Step(
+                2,
+                4,
+                8,
+                datapct,
+                1_000,
+                wd=1,
+                math_operator=operation,
+                load_path="final_8_4_1.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                16,
+                datapct,
+                1_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_8_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                24,
+                datapct,
+                1_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_16_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                32,
+                datapct,
+                1_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_24_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                40,
+                datapct,
+                2_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_32_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                48,
+                datapct,
+                2_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_40_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                56,
+                datapct,
+                2_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_48_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                64,
+                datapct,
+                4_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_56_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                72,
+                datapct,
+                4_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_64_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                80,
+                datapct,
+                4_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_72_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                88,
+                datapct,
+                4_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_80_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                96,
+                datapct,
+                8_000,
+                wd=1,  # 1e-5
+                math_operator=operation,
+                load_path="final_88_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                104,
+                datapct,
+                8_000,
+                wd=1,  # 1e-5
+                math_operator=operation,
+                load_path="final_96_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                112,
+                datapct,
+                8_000,
+                wd=1,  # 1e-5
+                math_operator=operation,
+                load_path="final_104_4_2.pt",
+                optim=optim,
+            ),
+
+            Step(
+                2,
+                4,
+                120,
+                datapct,
+                8_000,
+                wd=1,  # 1e-5
+                math_operator=operation,
+                load_path="final_112_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                128,
+                datapct,
+                64_000,
+                wd=1,
+                math_operator=operation,
+                load_path="final_120_4_2.pt",
                 optim=optim,
             ),
         ]
