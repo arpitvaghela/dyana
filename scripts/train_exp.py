@@ -89,13 +89,13 @@ operations = [
     ("+",  datapct_range1),
     ("-", datapct_range1),
     ("/", datapct_range1),
-    ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
+    # ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
     ("x**2+y**2_mod_97", datapct_range1),
     ("x**2+y**2+x*y_mod_97", datapct_range2),
     ("x**2+y**2+x*y+x_mod_97", datapct_range2),
     ("x**3+x*y_mod_97", datapct_range2),
     ("x**3+x*y**2+y_mod_97", datapct_range3),
-    ("S5", datapct_range1),
+    ("s5", datapct_range1),
     ("s5conj", datapct_range2),
     ("s5aba", datapct_range2)
 ]
@@ -306,7 +306,7 @@ for operation,datapct_range in operations:
                 optim=optim,
             ),
         ]
-        final_steps = steps2_h
+        final_steps = steps2
         run = wandb.init(project="dyana")
         path = os.path.join("logs", f"{run.id}")
         os.makedirs(path, exist_ok=True)
