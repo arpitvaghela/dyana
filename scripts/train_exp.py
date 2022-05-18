@@ -86,21 +86,23 @@ datapct_range2 = [x for x in range(20, 100, 5)]
 datapct_range3 = [x for x in range(30, 100, 5)]
 
 operations = [
-    ("+", datapct_range1),
-    ("-", datapct_range1),
-    ("/", datapct_range1),
+    # ("+", datapct_range1),
+    # ("-", datapct_range1),
+    # ("/", datapct_range1),
     # ("(x._value//y)if(y._value%2==1)else(x-y)_mod_97", datapct_range2),
-    ("x**2+y**2_mod_97", datapct_range1),
+    # ("x**2+y**2_mod_97", datapct_range1),
     ("x**2+y**2+x*y_mod_97", datapct_range2),
     ("x**2+y**2+x*y+x_mod_97", datapct_range2),
     ("x**3+x*y_mod_97", datapct_range2),
     ("x**3+x*y**2+y_mod_97", datapct_range3),
-    ("s5", datapct_range1),
+    # ("s5", datapct_range1),
     ("s5conj", datapct_range2),
     ("s5aba", datapct_range2),
 ]
 optim = "AdamW"
-for operation, datapct_range in [("-", [10,15, 20,25]), ("/", [10,15, 20,25]), ("+", [10,15, 20,25])]:
+# , ("/", [10,15, 20,25]), ("+", [10,15, 20,25])]:
+#  [("x**2+y**2_mod_97", [10,15, 20,25]) ]
+for operation, datapct_range in operations:
     for datapct in datapct_range:
         steps1_5 = [
             Step(1, 2, 8, datapct, 2_500, math_operator=operation),
@@ -407,6 +409,77 @@ for operation, datapct_range in [("-", [10,15, 20,25]), ("/", [10,15, 20,25]), (
                 load_path="final_112_4_2.pt",
                 optim=optim,
             ),
+        ]
+
+        stepsopb = [
+            Step(1, 4, 16, datapct, 8_000, wd=1, math_operator=operation, optim=optim),
+            Step(
+                2,
+                4,
+                16,
+                datapct,
+                4_000,
+                wd=1,
+                math_operator=operation,
+                load_path="final_16_4_1.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                32,
+                datapct,
+                4_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_16_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                48,
+                datapct,
+                8_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_32_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                64,
+                datapct,
+                10_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_48_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                96,
+                datapct,
+                10_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_64_4_2.pt",
+                optim=optim,
+            ),
+            Step(
+                2,
+                4,
+                128,
+                datapct,
+                64_000,
+                wd=1,  # 1e-4
+                math_operator=operation,
+                load_path="final_96_4_2.pt",
+                optim=optim,
+            )
+            
         ]
         stepsop_s = [
             Step(1, 4, 8, datapct, 1_000, wd=1, math_operator=operation, optim=optim),
